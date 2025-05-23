@@ -6,12 +6,13 @@ import { GAME_CONFIG } from "../../config/game.config";
  * Uses client and server seeds to generate verifiable random multipliers.
  */
 class MultiplierGenerator {
-  private clientSeed: string;
-  private serverSeed: string;
-  private hashedServerSeed: string;
-  private gameHash: string;
-  private rawMultiplier: number;
-  private finalMultiplier: number;
+  private clientSeed: null | string;
+  private serverSeed: null | string;
+  private hashedServerSeed: null | string;
+  private gameHash: null | string;
+  private rawMultiplier: null | number;
+  private finalMultiplier: null | number;
+  private decimal: null | number;
 
   /**
    * @param {Object} params - Constructor parameters
@@ -27,11 +28,12 @@ class MultiplierGenerator {
       this.clientSeed = clientSeed;
     }
 
-    this.serverSeed = "";
-    this.hashedServerSeed = "";
-    this.gameHash = "";
-    this.rawMultiplier = 0;
-    this.finalMultiplier = 0;
+    this.serverSeed = null;
+    this.hashedServerSeed = null;
+    this.gameHash = null;
+    this.rawMultiplier = null;
+    this.finalMultiplier = null;
+    this.decimal = null;
   }
 
   /**
@@ -69,7 +71,7 @@ class MultiplierGenerator {
       GAME_CONFIG;
 
     // Extract first N hex characters from game hash
-    const hashPrefix = this.gameHash.slice(0, HEX_LENGTH);
+    const hashPrefix = this.gameHash!.slice(0, HEX_LENGTH);
 
     // Calculate maximum possible value for the hex length
     const numOfBytes = HEX_LENGTH / 2;
@@ -94,6 +96,7 @@ class MultiplierGenerator {
     finalMultiplier = Math.min(MAX_MULTIPLIER, finalMultiplier);
 
     // Store results rounded to 2 decimal places
+    this.decimal = hashPrefixInDecimal;
     this.rawMultiplier = parseFloat(rawMultiplier.toFixed(2));
     this.finalMultiplier = parseFloat(finalMultiplier.toFixed(2));
   }
@@ -113,6 +116,7 @@ class MultiplierGenerator {
       hashedServerSeed: this.hashedServerSeed,
       gameHash: this.gameHash,
       rawMultiplier: this.rawMultiplier,
+      decimal: this.decimal,
       finalMultiplier: this.finalMultiplier,
     };
   }
