@@ -1,7 +1,10 @@
-import { MultiplierGenerator } from "./services/game/multiplierGenerator";
+import {
+  MultiplierGenerator,
+  MultiplierStats,
+} from "./services/game/multiplierGenerator";
 
-const multiplerData = new MultiplierGenerator({
-  clientSeed: "briangatundu",
-});
+const stats = new MultiplierStats();
 
-console.log(multiplerData.generateGameResults());
+stats.generateMultipliers(10000);
+
+stats.calculateRangeDistribution();

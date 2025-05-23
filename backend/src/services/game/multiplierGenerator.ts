@@ -122,4 +122,67 @@ class MultiplierGenerator {
   }
 }
 
-export { MultiplierGenerator };
+class MultiplierStats {
+  private multipliers: number[];
+
+  static ranges = [
+    { name: "1.00x - 1.99x", min: 1, max: 1.99 },
+    { name: "2.00x - 2.99x", min: 2, max: 2.99 },
+    { name: "3.00x - 4.99x", min: 3, max: 4.99 },
+    { name: "5.00x - 9.99x", min: 5, max: 9.99 },
+    { name: "10.00x - 19.99x", min: 10, max: 19.99 },
+    { name: "20.00x - 49.99x", min: 20, max: 49.99 },
+    { name: "50.00x - 99.99x", min: 50, max: 99.99 },
+    { name: "100.00x - 499.99x", min: 100, max: 499.99 },
+    { name: "500.00x - 999.99x", min: 500, max: 999.99 },
+    { name: "1000.00x+", min: 1000, max: Infinity },
+  ];
+
+  constructor() {
+    this.multipliers = [];
+  }
+
+  generateMultipliers(numOfRounds: number = 100) {
+    this.multipliers = [];
+
+    for (let i = 0; i < numOfRounds; i++) {
+      const clientSeed = crypto.randomBytes(5).toString("hex");
+      const generator = new MultiplierGenerator({ clientSeed });
+
+      this.multipliers.push(generator.generateGameResults().finalMultiplier!);
+    }
+  }
+
+  calculateRangeDistribution() {
+    const distribution: {
+      [range: string]: { count: number; percentage: number };
+    } = {};
+
+    // Initialize the distribution with all ranges
+    for (const range of MultiplierStats.ranges) {
+      distribution[range.name] = { count: 0, percentage: 0 };
+    }
+
+    // Count occurrences in each range
+    for (const multiplier of this.multipliers) {
+      for (const range of MultiplierStats.ranges) {
+        if (multiplier >= range.min && multiplier <= range.max) {
+          distribution[range.name].count++;
+          break;
+        }
+      }
+    }
+
+    // Calculate percentages
+    const total = this.multipliers.length;
+    for (const rangeName in distribution) {
+      const entry = distribution[rangeName];
+      entry.percentage =
+        total > 0 ? parseFloat(((entry.count / total) * 100).toFixed(2)) : 0;
+    }
+
+    return distribution;
+  }
+}
+
+export { MultiplierGenerator, MultiplierStats };
