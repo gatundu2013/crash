@@ -183,6 +183,17 @@ class MultiplierStats {
 
     return distribution;
   }
+
+  /**
+   * Get a comprehensive statistical report
+   * @returns Object containing all calculated statistics
+   */
+  public getStats() {
+    return {
+      count: this.multipliers.length,
+      distribution: this.calculateRangeDistribution(),
+    };
+  }
 }
 
 export { MultiplierGenerator, MultiplierStats };

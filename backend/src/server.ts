@@ -7,4 +7,4 @@ const stats = new MultiplierStats();
 
 stats.generateMultipliers(10000);
 
-stats.calculateRangeDistribution();
+console.log(stats.getStats());
