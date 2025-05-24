@@ -1,7 +1,20 @@
 import { Schema, model } from "mongoose";
+import { AccountStatus, Role, UserI } from "../types/user.types";
 
-const userSchema = new Schema({});
+const userSchema = new Schema<UserI, true>({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  phoneNumber: { type: String, required: true, unique: true },
+  accountBalance: { type: Number, default: 0 },
+  avatar: { type: String, default: "" },
+  accountStatus: {
+    type: String,
+    enum: Object.values(AccountStatus),
+    default: AccountStatus.ACTIVE,
+  },
+  role: { type: String, enum: Object.values(Role), default: Role.USER },
+});
 
-const User = model("User", userSchema);
+const User = model<UserI>("User", userSchema);
 
 export default User;
