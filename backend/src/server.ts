@@ -1,5 +1,6 @@
-import { GameState } from "./services/game/GameState";
+import { GameLifeCycle } from "./services/game/gameLifeCyle";
+import { RoundStateManager } from "./services/game/roundStateManager";
 
-const state = GameState.getInstance().generateRoundResults("dddd");
+const x = GameLifeCycle.getInstance();
 
-console.log(GameState.getInstance());
+GameLifeCycle.getInstance().startGame();

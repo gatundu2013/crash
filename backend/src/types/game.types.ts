@@ -5,6 +5,7 @@ export interface GameConfig {
   HOUSE_EDGE: number;
   CLIENT_SEED_REGEX: RegExp;
   DEFAULT_CLIENT_SEED: string;
+  MULTIPLIER_GROWTH_RATE: number;
 }
 
 export interface GameResults {

@@ -53,7 +53,7 @@ export class RoundStateManager {
     this.topStakes = [];
   }
 
-  public getRoundState() {
+  public getState() {
     return {
       gamePhase: this.gamePhase,
       currentMultiplier: this.currentMultiplier,
