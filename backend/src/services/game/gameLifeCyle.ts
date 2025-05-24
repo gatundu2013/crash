@@ -1,17 +1,17 @@
 import { GAME_CONFIG } from "../../config/game.config";
 import { RoundStateManager } from "./roundStateManager";
 
-export class GameLifeCycle {
-  private static instance: GameLifeCycle;
+export class GameLifeCycleManager {
+  private static instance: GameLifeCycleManager;
 
   private constructor() {}
 
   public static getInstance() {
-    if (!GameLifeCycle.instance) {
-      GameLifeCycle.instance = new GameLifeCycle();
+    if (!GameLifeCycleManager.instance) {
+      GameLifeCycleManager.instance = new GameLifeCycleManager();
     }
 
-    return GameLifeCycle.instance;
+    return GameLifeCycleManager.instance;
   }
 
   public startGame() {
