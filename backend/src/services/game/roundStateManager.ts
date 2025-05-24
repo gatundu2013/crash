@@ -4,16 +4,16 @@ import { MultiplierGenerator } from "./multiplierGenerator";
 import { v4 as uuidv4 } from "uuid";
 
 /**
- * GameState - Singleton class to manage the global state of the game
+ * RoundStateManager - Singleton class to manage the state of a game round
  * This class can be accessed from anywhere in the application
  */
-export class GameState {
-  private static instance: GameState;
+export class RoundStateManager {
+  private static instance: RoundStateManager;
 
   private gamePhase: GamePhase = GamePhase.PREPARING;
   private currentMultiplier: number = 1;
   private roundId: string | null = null;
-  private gameResults: GameResults | null = null;
+  private provablyFairOutcome: GameResults | null = null;
   private activeBets: Map<string, SingleBet> = new Map();
   private topStakes: SingleBet[] = [];
 
@@ -21,19 +21,18 @@ export class GameState {
   private constructor() {}
 
   /**
-   * Get the singleton instance of GameState
+   * Get the singleton instance of RoundState
    */
-  public static getInstance(): GameState {
-    if (!GameState.instance) {
-      GameState.instance = new GameState();
+  public static getInstance(): RoundStateManager {
+    if (!RoundStateManager.instance) {
+      RoundStateManager.instance = new RoundStateManager();
     }
-    return GameState.instance;
+    return RoundStateManager.instance;
   }
 
   public generateRoundResults(clientSeed: string) {
     const multiplierGenerator = new MultiplierGenerator({ clientSeed });
-
-    this.gameResults = multiplierGenerator.generateGameResults();
+    this.provablyFairOutcome = multiplierGenerator.generateGameResults();
     this.roundId = uuidv4();
   }
 
@@ -49,8 +48,18 @@ export class GameState {
     this.gamePhase = GamePhase.PREPARING;
     this.currentMultiplier = 1;
     this.roundId = null;
-    this.gameResults = null;
+    this.provablyFairOutcome = null;
     this.activeBets.clear();
     this.topStakes = [];
+  }
+
+  public getRoundState() {
+    return {
+      gamePhase: this.gamePhase,
+      currentMultiplier: this.currentMultiplier,
+      roundId: this.roundId,
+      provablyFairOutcome: this.provablyFairOutcome,
+      topStakes: this.topStakes,
+    };
   }
 }
