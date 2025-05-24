@@ -20,9 +20,7 @@ class MultiplierGenerator {
    */
   constructor({ clientSeed }: { clientSeed: string }) {
     if (!GAME_CONFIG.CLIENT_SEED_REGEX.test(clientSeed)) {
-      console.warn(
-        `Invalid client seed provided: "${clientSeed}". Falling back to a random seed.`
-      );
+      console.warn(`Invalid client seed provided: "${clientSeed}". Falling back to a random seed.`);
       this.clientSeed = GAME_CONFIG.DEFAULT_CLIENT_SEED;
     } else {
       this.clientSeed = clientSeed;
@@ -42,10 +40,7 @@ class MultiplierGenerator {
    */
   private generateServerSeed() {
     this.serverSeed = crypto.randomBytes(32).toString("base64");
-    this.hashedServerSeed = crypto
-      .createHash("sha256")
-      .update(this.serverSeed)
-      .digest("hex");
+    this.hashedServerSeed = crypto.createHash("sha256").update(this.serverSeed).digest("hex");
   }
 
   /**
@@ -54,10 +49,7 @@ class MultiplierGenerator {
    */
   private generateGameHash() {
     const combinedSeeds = `${this.serverSeed}${this.clientSeed}`;
-    this.gameHash = crypto
-      .createHash("sha256")
-      .update(combinedSeeds)
-      .digest("hex");
+    this.gameHash = crypto.createHash("sha256").update(combinedSeeds).digest("hex");
   }
 
   /**
@@ -67,8 +59,7 @@ class MultiplierGenerator {
    */
   private calculateMultiplier() {
     // Get configuration values for multiplier calculation
-    const { HEX_LENGTH, MIN_MULTIPLIER, MAX_MULTIPLIER, HOUSE_EDGE } =
-      GAME_CONFIG;
+    const { HEX_LENGTH, MIN_MULTIPLIER, MAX_MULTIPLIER, HOUSE_EDGE } = GAME_CONFIG;
 
     // Extract first N hex characters from game hash
     const hashPrefix = this.gameHash!.slice(0, HEX_LENGTH);
@@ -177,8 +168,7 @@ class MultiplierStats {
     const total = this.multipliers.length;
     for (const rangeName in distribution) {
       const entry = distribution[rangeName];
-      entry.percentage =
-        total > 0 ? parseFloat(((entry.count / total) * 100).toFixed(2)) : 0;
+      entry.percentage = total > 0 ? parseFloat(((entry.count / total) * 100).toFixed(2)) : 0;
     }
 
     return distribution;

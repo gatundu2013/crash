@@ -18,6 +18,12 @@ export interface GameResults {
   finalMultiplier: number | null;
 }
 
+export interface ClientSeedDetails {
+  username: string;
+  seed: string;
+  userId: string;
+}
+
 export enum GamePhase {
   PREPARING = "preparing",
   RUNNING = "running",

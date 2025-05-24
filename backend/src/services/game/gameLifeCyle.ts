@@ -15,8 +15,16 @@ export class GameLifeCycle {
   }
 
   public startGame() {
+    /**
+     * emit to all user that the game is in preparation phase - pending
+     * generate round results - done
+     * save roundAnalytics to the database - pending
+     * start the game and emit to all users of game start - pending
+     * **/
+
     // Generate round results
-    RoundStateManager.getInstance().generateRoundResults("InGodITrust");
+    const clientSeed = RoundStateManager.getInstance().getState().clientSeed;
+    RoundStateManager.getInstance().generateRoundResults(clientSeed);
 
     const roundStartTime = Date.now();
     this.incrementMultiplier(roundStartTime);

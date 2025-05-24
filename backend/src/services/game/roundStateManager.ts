@@ -1,5 +1,5 @@
 import { SingleBet } from "../../types/bet.types";
-import { GamePhase, GameResults } from "../../types/game.types";
+import { ClientSeedDetails, GamePhase, GameResults } from "../../types/game.types";
 import { MultiplierGenerator } from "./multiplierGenerator";
 import { v4 as uuidv4 } from "uuid";
 
@@ -11,6 +11,8 @@ export class RoundStateManager {
   private static instance: RoundStateManager;
 
   private gamePhase: GamePhase = GamePhase.PREPARING;
+  private clientSeedDetails: ClientSeedDetails[] = [];
+  private clientSeed: string = "";
   private currentMultiplier: number = 1;
   private roundId: string | null = null;
   private provablyFairOutcome: GameResults | null = null;
@@ -36,12 +38,31 @@ export class RoundStateManager {
     this.roundId = uuidv4();
   }
 
+  // setters
   public setGamePhase(gamePhase: GamePhase): void {
     this.gamePhase = gamePhase;
   }
 
   public setCurrentMultiplier(multiplier: number): void {
     this.currentMultiplier = multiplier;
+  }
+
+  public setClientSeed({ seed, userId, username }: ClientSeedDetails) {
+    this.clientSeedDetails.push({ seed, userId, username });
+    this.clientSeed = `${this.clientSeed}${seed}`;
+  }
+
+  //getters
+  public getState() {
+    return {
+      gamePhase: this.gamePhase,
+      currentMultiplier: this.currentMultiplier,
+      roundId: this.roundId,
+      provablyFairOutcome: this.provablyFairOutcome,
+      topStakes: this.topStakes,
+      clientSeedDetails: this.clientSeedDetails,
+      clientSeed: this.clientSeed,
+    };
   }
 
   public reset(): void {
@@ -51,15 +72,5 @@ export class RoundStateManager {
     this.provablyFairOutcome = null;
     this.activeBets.clear();
     this.topStakes = [];
-  }
-
-  public getState() {
-    return {
-      gamePhase: this.gamePhase,
-      currentMultiplier: this.currentMultiplier,
-      roundId: this.roundId,
-      provablyFairOutcome: this.provablyFairOutcome,
-      topStakes: this.topStakes,
-    };
   }
 }
