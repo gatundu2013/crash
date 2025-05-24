@@ -13,11 +13,13 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/mongoose": "^5.11.96",
     "@types/node": "^22.15.21",
     "nodemon": "^3.1.10",
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "mongoose": "^8.15.0",
     "uuid": "^11.1.0"
   }
 }
