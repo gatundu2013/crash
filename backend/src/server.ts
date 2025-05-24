@@ -1,10 +1,5 @@
-import {
-  MultiplierGenerator,
-  MultiplierStats,
-} from "./services/game/multiplierGenerator";
+import { GameState } from "./services/game/GameState";
 
-const stats = new MultiplierStats();
+const state = GameState.getInstance().generateRoundResults("dddd");
 
-stats.generateMultipliers(10000);
-
-console.log(stats.getStats());
+console.log(GameState.getInstance());

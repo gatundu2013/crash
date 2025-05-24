@@ -13,7 +13,11 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/node": "^22.15.21",
     "nodemon": "^3.1.10",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "uuid": "^11.1.0"
   }
 }
