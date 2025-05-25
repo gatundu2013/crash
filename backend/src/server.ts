@@ -1,6 +1,5 @@
-import { GameLifeCycle } from "./services/game/gameLifeCyle";
-import { RoundStateManager } from "./services/game/roundStateManager";
+import { GameLifeCycleManager } from "./services/game/gameLifeCyleManager";
 
-const x = GameLifeCycle.getInstance();
+const x = GameLifeCycleManager.getInstance();
 
-GameLifeCycle.getInstance().startGame();
+GameLifeCycleManager.getInstance().startGame();
