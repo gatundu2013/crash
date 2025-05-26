@@ -1,3 +1,12 @@
+import { Role } from "./user.types";
+
+export interface JwtPayloadI {
+  username: string;
+  phoneNumber: string;
+  userId: string;
+  role: Role;
+}
+
 export interface RegisterRequest {
   username: string;
   phoneNumber: string;
