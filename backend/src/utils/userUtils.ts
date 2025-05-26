@@ -3,7 +3,7 @@ import { UserI } from "../types/user.types";
 /**
  * Returns formatted user data for client responses
  */
-export function formatUserData(user: UserI | any) {
+export function formatUserData(user: UserI) {
   return {
     phoneNumber: user.phoneNumber,
     username: user.username,
