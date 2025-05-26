@@ -8,13 +8,12 @@ import {
 import bcrypt from "bcrypt";
 import { generateAuthTokens } from "../utils/authTokens";
 import { AuthError } from "../utils/errors/authError";
-import { formatUserData } from "../utils/userUtils";
+import { formatUserData } from "../utils/userFormatter";
 
 export async function registerUserService(params: RegisterRequest) {
   const { phoneNumber, username, password } = params;
 
   const phoneNumberExist = await User.findOne({ phoneNumber }).lean();
-
   if (phoneNumberExist) {
     throw new AuthError({
       httpCode: 409,
@@ -24,7 +23,6 @@ export async function registerUserService(params: RegisterRequest) {
   }
 
   const usernameExist = await User.findOne({ username }).lean();
-
   if (usernameExist) {
     throw new AuthError({
       httpCode: 409,

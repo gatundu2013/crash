@@ -1,4 +1,5 @@
-import Joi from "joi";
+import Joi, { func } from "joi";
+import { AuthError } from "../utils/errors/authError";
 
 export const phoneNumberRegex = /^(07|01)\d{8}$/;
 
@@ -11,15 +12,19 @@ export const registerSchema = Joi.object({
     "any.required": "Username is required",
   }),
 
-  phoneNumber: Joi.string().pattern(phoneNumberRegex).required().messages({
-    "string.base": "Phone number must be a string of digits",
-    "string.empty": "Phone number is required",
-    "string.pattern.base":
-      "Phone number must start with 07 or 01 and be exactly 10 digits",
-    "any.required": "Phone number is required",
-  }),
+  phoneNumber: Joi.string()
+    .trim()
+    .pattern(phoneNumberRegex)
+    .required()
+    .messages({
+      "string.base": "Phone number must be a string of digits",
+      "string.empty": "Phone number is required",
+      "string.pattern.base":
+        "Phone number must start with 07 or 01 and be exactly 10 digits",
+      "any.required": "Phone number is required",
+    }),
 
-  password: Joi.string().min(4).required().messages({
+  password: Joi.string().trim().min(4).required().messages({
     "string.base": "Password must be a string",
     "string.empty": "Password is required",
     "string.min": "Password must be at least 4 characters",
@@ -27,19 +32,36 @@ export const registerSchema = Joi.object({
   }),
 });
 
-// Validation for LoginRequest
 export const loginSchema = Joi.object({
-  phoneNumber: Joi.string().pattern(phoneNumberRegex).required().messages({
-    "string.base": "Phone number must be a string of digits",
-    "string.empty": "Phone number is required",
-    "string.pattern.base":
-      "Phone number must start with 07 or 01 and be exactly 10 digits",
-    "any.required": "Phone number is required",
-  }),
+  phoneNumber: Joi.string()
+    .trim()
+    .pattern(phoneNumberRegex)
+    .required()
+    .messages({
+      "string.base": "Phone number must be a string of digits",
+      "string.empty": "Phone number is required",
+      "string.pattern.base":
+        "Phone number must start with 07 or 01 and be exactly 10 digits",
+      "any.required": "Phone number is required",
+    }),
 
-  password: Joi.string().required().messages({
+  password: Joi.string().trim().required().messages({
     "string.base": "Password must be a string",
     "string.empty": "Password is required",
     "any.required": "Password is required",
   }),
 });
+
+export function validateAuthPayload(schema: Joi.Schema, payload: unknown) {
+  const { error, value } = schema.validate(payload);
+
+  if (error) {
+    throw new AuthError({
+      httpCode: 400,
+      isOperational: true,
+      description: error.message,
+    });
+  }
+
+  return value;
+}
