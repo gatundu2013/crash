@@ -8,6 +8,7 @@ import {
 import bcrypt from "bcrypt";
 import { generateAuthTokens } from "../utils/authTokens";
 import { AuthError } from "../utils/errors/authError";
+import { formatUserData } from "../utils/userUtils";
 
 export async function registerUserService(params: RegisterRequest) {
   const { phoneNumber, username, password } = params;
@@ -40,24 +41,52 @@ export async function registerUserService(params: RegisterRequest) {
     password: hashedPassword,
   });
 
-  const authTokens = generateAuthTokens({
+  const authTokens = await generateAuthTokens({
     role: newUser.role,
     phoneNumber: newUser.phoneNumber,
     username: newUser.username,
     userId: newUser._id.toString(),
   });
 
-  const userData = {
-    phoneNumber,
-    username,
-    accountBalance: newUser.accountBalance,
-    avatar: newUser.avatar,
-  };
+  const userData = formatUserData(newUser);
 
   return { authTokens, userData };
 }
 
-export async function loginUserService(params: LoginRequest) {}
+export async function loginUserService(params: LoginRequest) {
+  const { phoneNumber, password } = params;
+
+  const user = await User.findOne({ phoneNumber }).lean();
+
+  if (!user) {
+    throw new AuthError({
+      httpCode: 401,
+      description: "Invalid credentials",
+      isOperational: true,
+    });
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if (!isPasswordValid) {
+    throw new AuthError({
+      httpCode: 401,
+      description: "Invalid credentials",
+      isOperational: true,
+    });
+  }
+
+  const authTokens = await generateAuthTokens({
+    role: user.role,
+    phoneNumber: user.phoneNumber,
+    username: user.username,
+    userId: user._id.toString(),
+  });
+
+  const userData = formatUserData(user);
+
+  return { authTokens, userData };
+}
 
 export async function resetUserPasswordService(params: ResetPasswordRequest) {}
 
