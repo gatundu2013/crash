@@ -11,9 +11,11 @@ export async function registerUserController(req: Request, res: Response) {
   try {
     const registerPayload = validateAuthPayload(registerSchema, req.body);
 
+    console.log(registerPayload);
+
     const { authTokens, userData } = await registerUserService(registerPayload);
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       message: "Registered successfully",
       data: {
@@ -22,6 +24,7 @@ export async function registerUserController(req: Request, res: Response) {
       },
     });
   } catch (err) {
+    console.error(err);
     handleApiError(err, res);
   }
 }
@@ -32,7 +35,7 @@ export async function loginUserController(req: Request, res: Response) {
 
     const { authTokens, userData } = await loginUserService(loginPayload);
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "Logged in successfully",
       data: {
@@ -41,6 +44,7 @@ export async function loginUserController(req: Request, res: Response) {
       },
     });
   } catch (err) {
+    console.error(err);
     handleApiError(err, res);
   }
 }

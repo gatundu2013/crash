@@ -55,7 +55,6 @@ export async function loginUserService(params: LoginRequest) {
   const { phoneNumber, password } = params;
 
   const user = await User.findOne({ phoneNumber }).lean();
-
   if (!user) {
     throw new AuthError({
       httpCode: 401,
@@ -65,7 +64,6 @@ export async function loginUserService(params: LoginRequest) {
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
-
   if (!isPasswordValid) {
     throw new AuthError({
       httpCode: 401,
