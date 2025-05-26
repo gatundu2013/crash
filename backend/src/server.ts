@@ -1,5 +1,3 @@
-import { GameLifeCycleManager } from "./services/game/gameLifeCyleManager";
+import { startServer } from "./app";
 
-const x = GameLifeCycleManager.getInstance();
-
-GameLifeCycleManager.getInstance().startGame();
+startServer();
