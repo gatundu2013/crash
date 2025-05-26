@@ -1,12 +1,16 @@
 import express from "express";
+import dotenv from "dotenv";
+import { connectDb } from "./db";
+
+dotenv.config();
 
 const app = express();
 
 async function startServer() {
   try {
-    //TODO: connect database
+    await connectDb(process.env.MONGO_URL!);
 
-    app.listen(4000, () => {
+    app.listen(process.env.PORT!, () => {
       console.log("The server is running on port 4000");
     });
   } catch (err) {
