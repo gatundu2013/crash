@@ -1,4 +1,6 @@
+import { io } from "../../app";
 import { GAME_CONFIG } from "../../config/game.config";
+import { GamePhase } from "../../types/game.types";
 import { RoundStateManager } from "./roundStateManager";
 
 export class GameLifeCycleManager {
@@ -15,42 +17,56 @@ export class GameLifeCycleManager {
   }
 
   public startGame() {
-    /**
-     * emit to all user that the game is in preparation phase - pending
-     * generate round results - done
-     * save roundAnalytics to the database - pending
-     * start the game and emit to all users of game start - pending
-     * **/
+    const roundStateManager = RoundStateManager.getInstance();
 
-    // Generate round results
-    const clientSeed = RoundStateManager.getInstance().getState().clientSeed;
-    RoundStateManager.getInstance().generateRoundResults(clientSeed);
+    roundStateManager.setGamePhase(GamePhase.PREPARING);
+    io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.PREPARING, {
+      gamePhase: GamePhase.PREPARING,
+    });
 
-    const roundStartTime = Date.now();
-    this.incrementMultiplier(roundStartTime);
+    roundStateManager.generateRoundResults("");
+
+    //TODO: save game analytics to the database
+
+    roundStateManager.setGamePhase(GamePhase.RUNNING);
+    io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.RUNNING, {
+      gamePhase: GamePhase.RUNNING,
+    });
+
+    this.incrementMultiplier();
   }
 
-  private incrementMultiplier = (roundStartTime: number) => {
+  private incrementMultiplier = () => {
     const roundStateManager = RoundStateManager.getInstance();
     const currentRoundState = roundStateManager.getState();
 
-    const finalCrashPoint = currentRoundState.provablyFairOutcome?.finalMultiplier!;
-    const timeElapsed = (Date.now() - roundStartTime) / 1000; //sec
-    const currentMultiplier = Math.exp(GAME_CONFIG.MULTIPLIER_GROWTH_RATE * timeElapsed);
+    const incrementValue =
+      currentRoundState.currentMultiplier * GAME_CONFIG.MULTIPLIER_GROWTH_RATE;
 
-    if (currentMultiplier >= finalCrashPoint) {
-      // End the round (crash occurred)
-      console.log("crash occured");
+    const newMultiplier = currentRoundState.currentMultiplier + incrementValue;
+
+    const finalCrashPoint =
+      currentRoundState.provablyFairOutcome?.finalMultiplier!;
+
+    if (newMultiplier >= finalCrashPoint) {
+      // bust all bets that we not cashed out
+      // calculate profit made by the round
+      // start new round
+
+      roundStateManager.reset();
       this.startGame();
+
       return;
     }
 
-    roundStateManager.setCurrentMultiplier(currentMultiplier);
-
-    console.log(currentMultiplier.toFixed(2)); // Displayed multiplier
+    roundStateManager.setCurrentMultiplier(newMultiplier);
+    io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_CURRENT_MULTIPLIER, {
+      gamePhase: GamePhase.RUNNING,
+      multiplier: newMultiplier,
+    });
 
     setTimeout(() => {
-      this.incrementMultiplier(roundStartTime);
+      this.incrementMultiplier();
     }, 100);
   };
 }

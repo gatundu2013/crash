@@ -8,7 +8,8 @@ export interface GameConfig {
   MULTIPLIER_GROWTH_RATE: number;
 }
 
-export interface GameResults {
+export interface ProvablyFairOutcomeI {
+  clientSeedDetails: ClientSeedDetails[] | [];
   clientSeed: string | null;
   serverSeed: string | null;
   hashedServerSeed: string | null;

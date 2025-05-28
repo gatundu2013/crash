@@ -1,11 +1,18 @@
 import crypto from "crypto";
 import { GAME_CONFIG } from "../../config/game.config";
+import { ClientSeedDetails } from "../../types/game.types";
+
+interface MultiplierGeneratorDep {
+  clientSeed: string;
+  clientSeedDetails: ClientSeedDetails[] | [];
+}
 
 /**
  * Provably fair multiplier generator for gambling/gaming applications.
  * Uses client and server seeds to generate verifiable random multipliers.
  */
 class MultiplierGenerator {
+  private clientSeedDetails: ClientSeedDetails[] | [];
   private clientSeed: null | string;
   private serverSeed: null | string;
   private hashedServerSeed: null | string;
@@ -18,12 +25,16 @@ class MultiplierGenerator {
    * @param {Object} params - Constructor parameters
    * @param {string} params.clientSeed - Client-provided seed for randomness
    */
-  constructor({ clientSeed }: { clientSeed: string }) {
+  constructor({ clientSeed, clientSeedDetails }: MultiplierGeneratorDep) {
     if (!GAME_CONFIG.CLIENT_SEED_REGEX.test(clientSeed)) {
-      console.warn(`Invalid client seed provided: "${clientSeed}". Falling back to a random seed.`);
+      console.warn(
+        `Invalid client seed provided: "${clientSeed}". Falling back to a random seed.`
+      );
       this.clientSeed = GAME_CONFIG.DEFAULT_CLIENT_SEED;
+      this.clientSeedDetails = [];
     } else {
       this.clientSeed = clientSeed;
+      this.clientSeedDetails = clientSeedDetails;
     }
 
     this.serverSeed = null;
@@ -40,7 +51,10 @@ class MultiplierGenerator {
    */
   private generateServerSeed() {
     this.serverSeed = crypto.randomBytes(32).toString("base64");
-    this.hashedServerSeed = crypto.createHash("sha256").update(this.serverSeed).digest("hex");
+    this.hashedServerSeed = crypto
+      .createHash("sha256")
+      .update(this.serverSeed)
+      .digest("hex");
   }
 
   /**
@@ -49,7 +63,10 @@ class MultiplierGenerator {
    */
   private generateGameHash() {
     const combinedSeeds = `${this.serverSeed}${this.clientSeed}`;
-    this.gameHash = crypto.createHash("sha256").update(combinedSeeds).digest("hex");
+    this.gameHash = crypto
+      .createHash("sha256")
+      .update(combinedSeeds)
+      .digest("hex");
   }
 
   /**
@@ -59,7 +76,8 @@ class MultiplierGenerator {
    */
   private calculateMultiplier() {
     // Get configuration values for multiplier calculation
-    const { HEX_LENGTH, MIN_MULTIPLIER, MAX_MULTIPLIER, HOUSE_EDGE } = GAME_CONFIG;
+    const { HEX_LENGTH, MIN_MULTIPLIER, MAX_MULTIPLIER, HOUSE_EDGE } =
+      GAME_CONFIG;
 
     // Extract first N hex characters from game hash
     const hashPrefix = this.gameHash!.slice(0, HEX_LENGTH);
@@ -96,7 +114,7 @@ class MultiplierGenerator {
    * Generates complete game results with all seeds and multipliers
    * @returns {Object} Game result containing seeds, hash, and multipliers
    */
-  public generateGameResults() {
+  public generateProvablyFairResults() {
     this.generateServerSeed();
     this.generateGameHash();
     this.calculateMultiplier();
@@ -109,6 +127,7 @@ class MultiplierGenerator {
       rawMultiplier: this.rawMultiplier,
       decimal: this.decimal,
       finalMultiplier: this.finalMultiplier,
+      clientSeedDetails: this.clientSeedDetails,
     };
   }
 }
@@ -138,9 +157,14 @@ class MultiplierStats {
 
     for (let i = 0; i < numOfRounds; i++) {
       const clientSeed = crypto.randomBytes(5).toString("hex");
-      const generator = new MultiplierGenerator({ clientSeed });
+      const generator = new MultiplierGenerator({
+        clientSeed,
+        clientSeedDetails: [],
+      });
 
-      this.multipliers.push(generator.generateGameResults().finalMultiplier!);
+      this.multipliers.push(
+        generator.generateProvablyFairResults().finalMultiplier!
+      );
     }
   }
 
@@ -168,7 +192,8 @@ class MultiplierStats {
     const total = this.multipliers.length;
     for (const rangeName in distribution) {
       const entry = distribution[rangeName];
-      entry.percentage = total > 0 ? parseFloat(((entry.count / total) * 100).toFixed(2)) : 0;
+      entry.percentage =
+        total > 0 ? parseFloat(((entry.count / total) * 100).toFixed(2)) : 0;
     }
 
     return distribution;

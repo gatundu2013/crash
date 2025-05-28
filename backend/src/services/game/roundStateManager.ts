@@ -1,5 +1,9 @@
 import { SingleBet } from "../../types/bet.types";
-import { ClientSeedDetails, GamePhase, GameResults } from "../../types/game.types";
+import {
+  ClientSeedDetails,
+  GamePhase,
+  ProvablyFairOutcomeI,
+} from "../../types/game.types";
 import { MultiplierGenerator } from "./multiplierGenerator";
 import { v4 as uuidv4 } from "uuid";
 
@@ -15,7 +19,7 @@ export class RoundStateManager {
   private clientSeed: string = "";
   private currentMultiplier: number = 1;
   private roundId: string | null = null;
-  private provablyFairOutcome: GameResults | null = null;
+  private provablyFairOutcome: ProvablyFairOutcomeI | null = null;
   private activeBets: Map<string, SingleBet> = new Map();
   private topStakes: SingleBet[] = [];
 
@@ -33,8 +37,13 @@ export class RoundStateManager {
   }
 
   public generateRoundResults(clientSeed: string) {
-    const multiplierGenerator = new MultiplierGenerator({ clientSeed });
-    this.provablyFairOutcome = multiplierGenerator.generateGameResults();
+    const multiplierGenerator = new MultiplierGenerator({
+      clientSeed,
+      clientSeedDetails: this.clientSeedDetails,
+    });
+
+    this.provablyFairOutcome =
+      multiplierGenerator.generateProvablyFairResults();
     this.roundId = uuidv4();
   }
 
