@@ -1,4 +1,4 @@
-const SOCKET_EVENTS = {
+export const SOCKET_EVENTS = {
   EMITTERS: {
     //game
     BROADCAST_HASHED_SERVER_SEED: "broadcastHashedServerSeed",

@@ -1,7 +1,11 @@
 import { io } from "../../app";
 import { GAME_CONFIG } from "../../config/game.config";
+import { SOCKET_EVENTS } from "../../config/socketEvents.config";
 import { GamePhase } from "../../types/game.types";
+import RoundAnalyticsManager from "./roundAnalyticsManager";
 import { RoundStateManager } from "./roundStateManager";
+
+const roundAnalyticsManager = new RoundAnalyticsManager();
 
 export class GameLifeCycleManager {
   private static instance: GameLifeCycleManager;
@@ -16,24 +20,34 @@ export class GameLifeCycleManager {
     return GameLifeCycleManager.instance;
   }
 
-  public startGame() {
-    const roundStateManager = RoundStateManager.getInstance();
+  public async startGame() {
+    try {
+      const roundStateManager = RoundStateManager.getInstance();
 
-    roundStateManager.setGamePhase(GamePhase.PREPARING);
-    io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.PREPARING, {
-      gamePhase: GamePhase.PREPARING,
-    });
+      roundStateManager.setGamePhase(GamePhase.PREPARING);
+      io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.PREPARING, {
+        gamePhase: GamePhase.PREPARING,
+      });
 
-    roundStateManager.generateRoundResults("");
+      roundStateManager.generateRoundResults("");
 
-    //TODO: save game analytics to the database
+      if (roundStateManager.getState().bets.size >= 0) {
+        await roundAnalyticsManager.saveRoundAnalytics();
+      }
 
-    roundStateManager.setGamePhase(GamePhase.RUNNING);
-    io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.RUNNING, {
-      gamePhase: GamePhase.RUNNING,
-    });
+      roundStateManager.setGamePhase(GamePhase.RUNNING);
+      io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.RUNNING, {
+        gamePhase: GamePhase.RUNNING,
+      });
 
-    this.incrementMultiplier();
+      this.incrementMultiplier();
+    } catch (err) {
+      console.log("Failed to run the game", err);
+
+      io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.ERROR, {
+        message: "An error occured on our end. We are working on it",
+      });
+    }
   }
 
   private incrementMultiplier = () => {

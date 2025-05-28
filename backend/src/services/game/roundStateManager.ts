@@ -20,7 +20,8 @@ export class RoundStateManager {
   private currentMultiplier: number = 1;
   private roundId: string | null = null;
   private provablyFairOutcome: ProvablyFairOutcomeI | null = null;
-  private activeBets: Map<string, SingleBet> = new Map();
+  private totalBetAmount: number = 0;
+  private bets: Map<string, SingleBet> = new Map();
   private topStakes: SingleBet[] = [];
 
   // Private constructor to prevent direct instantiation
@@ -71,6 +72,8 @@ export class RoundStateManager {
       topStakes: this.topStakes,
       clientSeedDetails: this.clientSeedDetails,
       clientSeed: this.clientSeed,
+      bets: this.bets,
+      totalBetAmount: this.totalBetAmount,
     };
   }
 
@@ -79,7 +82,7 @@ export class RoundStateManager {
     this.currentMultiplier = 1;
     this.roundId = null;
     this.provablyFairOutcome = null;
-    this.activeBets.clear();
+    this.bets.clear();
     this.topStakes = [];
   }
 }

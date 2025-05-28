@@ -41,16 +41,13 @@ const RoundAnalyticsSchema = new Schema<RoundAnalyticsDocument>(
       totalBetAmount: {
         type: Number,
         required: true,
-        default: 0,
       },
       totalCashoutAmount: {
         type: Number,
-        required: true,
         default: 0,
       },
       houseProfit: {
         type: Number,
-        required: true,
         default: 0,
       },
     },
@@ -58,9 +55,9 @@ const RoundAnalyticsSchema = new Schema<RoundAnalyticsDocument>(
   { timestamps: true }
 );
 
-const RoundAnalytics = model<RoundAnalyticsDocument>(
+const RoundAnalyticsModel = model<RoundAnalyticsDocument>(
   "RoundAnalytics",
   RoundAnalyticsSchema
 );
 
-export default RoundAnalytics;
+export default RoundAnalyticsModel;
