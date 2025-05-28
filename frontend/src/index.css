@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -5,6 +7,7 @@
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-weight: 400;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -42,11 +45,42 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* custom */
+  --layer-1: #1e2121;
+  --layer-2: #232626;
+  --layer-3: #292d2e;
+  --layer-4: #323738;
+  --layer-5: #3a4142;
+  --layer-6: #4a5354;
+  --destructive: #7f1d1d;
+  --green-1: #24ee89;
+  --green-2: #9fe871;
+  --error: #fc3c3c;
+  --orange: #ff9820;
+  --white: #fff;
+  --light-white: #b3bec1;
 }
 
 body {
-  background-color: black;
+  background-color: var(--layer-1);
   color: white;
+  max-width: 100vw;
+}
+
+@theme {
+  --color-layer-1: var(--layer-1);
+  --color-layer-2: var(--layer-2);
+  --color-layer-3: var(--layer-3);
+  --color-layer-4: var(--layer-4);
+  --color-layer-5: var(--layer-5);
+  --color-layer-6: var(--layer-6);
+  --color-green-1: var(--green-1);
+  --color-green-2: var(--green-2);
+  --color-red-1: var(--error);
+  --color-orange-1: var(--orange);
+  --color-destructive: var(--destructive);
+  --color-white-2: var(--light-white);
 }
 
 @theme inline {
