@@ -6,10 +6,14 @@ import { Server } from "socket.io";
 import { createServer } from "http";
 import { SocketManager } from "./services/socket/socketManager";
 import { GameLifeCycleManager } from "./services/game/gameLifeCyleManager";
-
-dotenv.config();
+import { corsOptions } from "./config/cors.config";
+import cors from "cors";
 
 const app = express();
+
+app.use(cors(corsOptions));
+dotenv.config();
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
