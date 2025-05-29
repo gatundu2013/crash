@@ -31,7 +31,7 @@ export class GameLifeCycleManager {
 
       roundStateManager.generateRoundResults("");
 
-      if (roundStateManager.getState().bets.size >= 0) {
+      if (roundStateManager.getState().bets.size > 0) {
         await roundAnalyticsManager.saveRoundAnalytics();
       }
 
