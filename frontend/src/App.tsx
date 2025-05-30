@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import useSocketStore from "./stores/socketStore";
 import MainLayout from "./layouts/MainLayout";
 import { SignUpForm } from "./pages/auth/components/SignUpForm";
+import { ToastContainer } from "react-toastify";
 
 function App() {
   const socket = useSocketStore((state) => state.socket);
@@ -31,6 +32,7 @@ function App() {
 
   return (
     <div className="w-full h-[100vh]">
+      <ToastContainer />
       <MainLayout
         body={
           <div className="w-full h-full flex justify-center">

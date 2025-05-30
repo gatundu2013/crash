@@ -1,48 +1,21 @@
 import { Form, FormField, SubmitButton } from "../../../components/forms";
 import { HiArrowNarrowLeft } from "react-icons/hi";
 import { Button } from "../../../components/ui/button";
-import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import type { SubmitHandler } from "react-hook-form";
-import type { SignUpFormData } from "@/types/auth.types";
-import { signUpSchema } from "@/validations/auth.validations";
-import { Checkbox } from "../../../components/ui/checkbox";
+import useSignUp from "@/hooks/auth/useSignUp";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function SignUpForm() {
+  const { form, signUp } = useSignUp();
   const {
     register,
     handleSubmit,
     getValues,
     formState: { errors, isSubmitting },
     setValue,
-  } = useForm<SignUpFormData>({
-    defaultValues: {
-      phoneNumber: "",
-      username: "",
-      password: "",
-      agreeToTerms: false,
-    },
-    resolver: yupResolver(signUpSchema),
-  });
+  } = form;
 
-  // Handle checkbox change
   const handleCheckboxChange = (checked: boolean) => {
     setValue("agreeToTerms", checked, { shouldValidate: true });
-  };
-
-  const onSubmit: SubmitHandler<SignUpFormData> = async (
-    data: SignUpFormData
-  ) => {
-    try {
-      // Simulating API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Form submitted:", data);
-
-      // Navigate to next page after successful signup
-      console.log("Signup successful");
-    } catch (error) {
-      console.error("Signup failed:", error);
-    }
   };
 
   return (
@@ -58,7 +31,7 @@ export function SignUpForm() {
         <h1 className="text-xl font-semibold w-full text-center">Sign Up</h1>
       </div>
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Form onSubmit={handleSubmit(signUp)} className="space-y-4">
         <FormField
           label="Phone Number"
           {...register("phoneNumber")}
