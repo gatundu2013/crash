@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import useSocketStore from "./stores/socketStore";
 import MainLayout from "./layouts/MainLayout";
-import SignUp from "./pages/SignUp";
+import SignUp from "./pages/auth/SignUp";
 import { ToastContainer } from "react-toastify";
 
 function App() {
