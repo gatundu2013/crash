@@ -21,3 +21,14 @@ export const signUpSchema = yup.object({
     .oneOf([true], "You must agree to the terms and conditions")
     .required(),
 });
+
+export const signInSchema = yup.object({
+  phoneNumber: yup
+    .string()
+    .required("Phone number is required")
+    .matches(phoneNumberRegex, "Please enter a valid 10-digit phone number"),
+  password: yup
+    .string()
+    .required("Password is required")
+    .min(4, "Password must be at least 4 characters"),
+});
