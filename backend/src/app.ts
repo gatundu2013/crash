@@ -18,6 +18,10 @@ dotenv.config();
 // Add cookie-parser middleware
 app.use(cookieParser());
 
+app.use(express.json());
+
+app.use("/api/v1", router);
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -25,10 +29,6 @@ const io = new Server(httpServer, {
     credentials: true,
   },
 });
-
-app.use(express.json());
-
-app.use("/api/v1", router);
 
 async function startServer() {
   try {

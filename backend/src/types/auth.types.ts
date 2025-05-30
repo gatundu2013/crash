@@ -1,5 +1,13 @@
 import { Role } from "./user.types";
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayloadI;
+    }
+  }
+}
+
 export interface JwtPayloadI {
   username: string;
   phoneNumber: string;
