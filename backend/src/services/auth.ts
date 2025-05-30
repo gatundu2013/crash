@@ -9,6 +9,7 @@ import bcrypt from "bcrypt";
 import { generateAuthTokens } from "../utils/authTokens";
 import { AuthError } from "../utils/errors/authError";
 import { formatUserData } from "../utils/userFormatter";
+import { AccountStatus } from "../types/user.types";
 
 export async function registerUserService(params: RegisterRequest) {
   const { phoneNumber, username, password, agreeToTerms } = params;
@@ -83,6 +84,22 @@ export async function loginUserService(params: LoginRequest) {
   const userData = formatUserData(user);
 
   return { authTokens, userData };
+}
+
+export async function getUserAuthStatus(userId: string) {
+  const user = await User.findOne({ _id: userId }).lean();
+
+  if (user?.accountStatus !== AccountStatus.ACTIVE) {
+    throw new AuthError({
+      description: "This account is not active",
+      httpCode: 403,
+      isOperational: true,
+    });
+  }
+
+  const userData = formatUserData(user);
+
+  return { userData };
 }
 
 export async function resetUserPasswordService(params: ResetPasswordRequest) {}

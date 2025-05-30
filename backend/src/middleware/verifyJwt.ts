@@ -19,6 +19,6 @@ export function verifyJwt(req: Request, res: Response, next: NextFunction) {
 
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Unauthorized" });
+    res.status(401).json({ message: "Unauthorized" });
   }
 }
