@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import useSocketStore from "./stores/socketStore";
 import MainLayout from "./layouts/MainLayout";
-import { SignUpForm } from "./pages/auth/components/SignUpForm";
+import SignUp from "./pages/SignUp";
 import { ToastContainer } from "react-toastify";
 
 function App() {
@@ -36,7 +36,7 @@ function App() {
       <MainLayout
         body={
           <div className="w-full h-full flex justify-center">
-            <SignUpForm />
+            <SignUp />
             <div className="absolute bottom-4 right-4">
               <h2>Current Multiplier: {currentMultiplier.toFixed(2)}</h2>
             </div>

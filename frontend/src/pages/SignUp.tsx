@@ -1,10 +1,10 @@
-import { Form, FormField, SubmitButton } from "../../../components/forms";
+import { Form, FormField, SubmitButton } from "../components/forms";
 import { HiArrowNarrowLeft } from "react-icons/hi";
-import { Button } from "../../../components/ui/button";
+import { Button } from "../components/ui/button";
 import useSignUp from "@/hooks/auth/useSignUp";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export function SignUpForm() {
+function SignUp() {
   const { form, signUp } = useSignUp();
   const {
     register,
@@ -95,3 +95,5 @@ export function SignUpForm() {
     </div>
   );
 }
+
+export default SignUp;
