@@ -12,6 +12,7 @@ const userSchema = new Schema<UserI>({
     enum: Object.values(AccountStatus),
     default: AccountStatus.ACTIVE,
   },
+  agreeToTerms: { type: Boolean, required: true },
   role: { type: String, enum: Object.values(Role), default: Role.USER },
 });
 

@@ -6,6 +6,7 @@ import {
   validateAuthPayload,
 } from "../validations/auth.validation";
 import { handleApiError } from "../utils/apiErrorHandler";
+import { setCookies } from "../utils/authTokens";
 
 export async function registerUserController(req: Request, res: Response) {
   try {
@@ -15,13 +16,11 @@ export async function registerUserController(req: Request, res: Response) {
 
     const { authTokens, userData } = await registerUserService(registerPayload);
 
+    setCookies(authTokens, res);
+
     res.status(201).json({
       success: true,
-      message: "Registered successfully",
-      data: {
-        user: userData,
-        tokens: authTokens,
-      },
+      user: userData,
     });
   } catch (err) {
     console.error(err);
@@ -35,13 +34,11 @@ export async function loginUserController(req: Request, res: Response) {
 
     const { authTokens, userData } = await loginUserService(loginPayload);
 
-    res.status(200).json({
+    setCookies(authTokens, res);
+
+    res.status(201).json({
       success: true,
-      message: "Logged in successfully",
-      data: {
-        user: userData,
-        tokens: authTokens,
-      },
+      user: userData,
     });
   } catch (err) {
     console.error(err);

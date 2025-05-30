@@ -11,6 +11,7 @@ export interface RegisterRequest {
   username: string;
   phoneNumber: string;
   password: string;
+  agreeToTerms: boolean;
 }
 
 export interface LoginRequest {

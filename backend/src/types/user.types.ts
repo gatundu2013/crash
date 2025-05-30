@@ -15,4 +15,5 @@ export interface UserI {
   avatar: string;
   accountStatus: AccountStatus;
   role: Role;
+  agreeToTerms: boolean;
 }

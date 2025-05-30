@@ -11,7 +11,7 @@ import { AuthError } from "../utils/errors/authError";
 import { formatUserData } from "../utils/userFormatter";
 
 export async function registerUserService(params: RegisterRequest) {
-  const { phoneNumber, username, password } = params;
+  const { phoneNumber, username, password, agreeToTerms } = params;
 
   const phoneNumberExist = await User.findOne({ phoneNumber }).lean();
   if (phoneNumberExist) {
@@ -37,9 +37,10 @@ export async function registerUserService(params: RegisterRequest) {
     username,
     phoneNumber,
     password: hashedPassword,
+    agreeToTerms,
   });
 
-  const authTokens = await generateAuthTokens({
+  const authTokens = generateAuthTokens({
     role: newUser.role,
     phoneNumber: newUser.phoneNumber,
     username: newUser.username,
@@ -72,7 +73,7 @@ export async function loginUserService(params: LoginRequest) {
     });
   }
 
-  const authTokens = await generateAuthTokens({
+  const authTokens = generateAuthTokens({
     role: user.role,
     phoneNumber: user.phoneNumber,
     username: user.username,

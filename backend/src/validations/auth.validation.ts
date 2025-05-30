@@ -30,6 +30,11 @@ export const registerSchema = Joi.object({
     "string.min": "Password must be at least 4 characters",
     "any.required": "Password is required",
   }),
+
+  agreeToTerms: Joi.boolean().valid(true).required().messages({
+    "any.only": "You must agree to the terms and conditions",
+    "any.required": "Agreement to terms is required",
+  }),
 });
 
 export const loginSchema = Joi.object({

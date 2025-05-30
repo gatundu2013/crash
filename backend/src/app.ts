@@ -8,16 +8,21 @@ import { SocketManager } from "./services/socket/socketManager";
 import { GameLifeCycleManager } from "./services/game/gameLifeCyleManager";
 import { corsOptions } from "./config/cors.config";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
 app.use(cors(corsOptions));
 dotenv.config();
 
+// Add cookie-parser middleware
+app.use(cookieParser());
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: "http://localhost:5173",
+    credentials: true,
   },
 });
 
