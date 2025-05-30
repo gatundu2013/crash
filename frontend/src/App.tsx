@@ -3,6 +3,7 @@ import useSocketStore from "./stores/socketStore";
 import MainLayout from "./layouts/MainLayout";
 import SignUp from "./pages/auth/SignUp";
 import { ToastContainer } from "react-toastify";
+import SignIn from "./pages/auth/SignIn";
 
 function App() {
   const socket = useSocketStore((state) => state.socket);
@@ -36,6 +37,7 @@ function App() {
       <MainLayout
         body={
           <div className="w-full h-full flex justify-center">
+            <SignIn />
             <SignUp />
             <div className="absolute bottom-4 right-4">
               <h2>Current Multiplier: {currentMultiplier.toFixed(2)}</h2>

@@ -1,7 +1,7 @@
 import { API_ROUTES } from "@/config/apiRoutes.config";
 import { api } from "@/config/axios.config";
 import useAuthStore from "@/stores/authStore";
-import type { SignInFormData, SignUpFormData } from "@/types/auth.types";
+import type { SignInFormData } from "@/types/auth.types";
 import { handleTryCatchError } from "@/utils/tryCatchError";
 import { signInSchema } from "@/validations/auth.validations";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -18,8 +18,8 @@ const useSignIn = () => {
   });
   const authenticate = useAuthStore((state) => state.authenticate);
 
-  const signIn: SubmitHandler<SignUpFormData> = async (
-    data: SignUpFormData
+  const signIn: SubmitHandler<SignInFormData> = async (
+    data: SignInFormData
   ) => {
     try {
       const response = await api.post(API_ROUTES.AUTH.SIGN_IN, data);
