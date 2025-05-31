@@ -4,8 +4,11 @@ import MainLayout from "./layouts/MainLayout";
 import SignUp from "./pages/auth/SignUp";
 import { ToastContainer } from "react-toastify";
 import SignIn from "./pages/auth/SignIn";
+import useAuthStatus from "./hooks/auth/useAuthStatus";
 
 function App() {
+  useAuthStatus();
+
   const socket = useSocketStore((state) => state.socket);
   const connectSocket = useSocketStore((state) => state.connectSocket);
   const [currentMultiplier, setCurrentMultiplier] = useState(1);
