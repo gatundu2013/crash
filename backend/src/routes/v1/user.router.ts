@@ -11,4 +11,4 @@ export const userRouter = Router();
 userRouter.post("/auth/signup", registerUserController);
 userRouter.post("/auth/signin", loginUserController);
 
-userRouter.post("/auth/status", verifyJwt, checkAuthStatus);
+userRouter.get("/auth/status", verifyJwt, checkAuthStatus);

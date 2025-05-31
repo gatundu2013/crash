@@ -8,8 +8,8 @@ const NavAutheticated = () => {
   const toggleChats = useChatStore((state) => state.toggleChats);
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex items-center gap-2 bg-layer-4 px-3 py-1.5 rounded-md hover:bg-layer-5 transition-colors cursor-pointer">
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 bg-layer-4 px-2 py-1 rounded-md hover:bg-layer-5 transition-colors cursor-pointer">
         <RiWallet3Line className="text-green-1" />
         <div>
           <p className="text-xs text-white/70">Balance</p>
@@ -20,7 +20,11 @@ const NavAutheticated = () => {
         </div>
       </div>
 
-      <Button variant="default" size="sm" className="font-medium">
+      <Button
+        variant="default"
+        size="sm"
+        className="font-medium hidden md:block"
+      >
         Deposit
       </Button>
 
@@ -40,7 +44,7 @@ const NavAutheticated = () => {
           <AvatarImage src={Avatar1} alt="User avatar" />
           <AvatarFallback className="bg-layer-4">AV</AvatarFallback>
         </Avatar>
-        <RiUserSettingsLine className="text-white/70" />
+        <RiUserSettingsLine className="text-white/70 hidden md:block" />
       </div>
     </div>
   );

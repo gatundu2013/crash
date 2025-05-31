@@ -40,8 +40,8 @@ function App() {
       <MainLayout
         body={
           <div className="w-full h-full flex justify-center">
-            <SignIn />
-            <SignUp />
+            {/* <SignIn /> */}
+            {/* <SignUp /> */}
             <div className="absolute bottom-4 right-4">
               <h2>Current Multiplier: {currentMultiplier.toFixed(2)}</h2>
             </div>

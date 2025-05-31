@@ -17,7 +17,9 @@ const MainLayout = ({ body, sidebarContent }: MainLayoutProps) => {
         <div>Footer</div>
       </div>
       {chatsAreShown && (
-        <div className="w-[350px]">{sidebarContent || "chats"}</div>
+        <div className="w-full absolute top-0 bottom-0 md:relative md:w-[400px] bg-red-500">
+          {sidebarContent || "chats"}
+        </div>
       )}
     </div>
   );

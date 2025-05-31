@@ -1,10 +1,9 @@
 import { Button } from "@/components/ui/button";
-import React from "react";
 import { RiChat1Fill } from "react-icons/ri";
 
 const NavNotAuthenticated = () => {
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-3">
       <Button variant={"outline"} className="font-bold">
         Sign in
       </Button>
