@@ -3,6 +3,7 @@ import { HiArrowNarrowLeft } from "react-icons/hi";
 import { Button } from "../../components/ui/button";
 import useSignUp from "@/hooks/auth/useSignUp";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Link, useNavigate } from "react-router-dom";
 
 function SignUp() {
   const { form, signUp } = useSignUp();
@@ -13,6 +14,7 @@ function SignUp() {
     formState: { errors, isSubmitting },
     setValue,
   } = form;
+  const navigate = useNavigate();
 
   const handleCheckboxChange = (checked: boolean) => {
     setValue("agreeToTerms", checked, { shouldValidate: true });
@@ -24,7 +26,7 @@ function SignUp() {
         <Button
           variant="secondary"
           className="p-0 text-white bg-transparent"
-          onClick={() => console.log("Go back")}
+          onClick={() => navigate(-1)}
         >
           <HiArrowNarrowLeft className="h-5 w-5" />
         </Button>
@@ -88,9 +90,9 @@ function SignUp() {
 
       <div className="mt-5 text-center space-x-1 text-sm">
         <span>Already have an account?</span>
-        <a href="#" className="text-green-1 font-medium hover:underline">
+        <Link to="/signin" className="text-green-1 font-medium hover:underline">
           Sign In
-        </a>
+        </Link>
       </div>
     </div>
   );
