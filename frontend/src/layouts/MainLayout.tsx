@@ -1,4 +1,5 @@
 import NavBar from "@/components/navbar/Index";
+import useChatStore from "@/stores/chatStore";
 import React from "react";
 
 interface MainLayoutProps {
@@ -7,6 +8,7 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ body, sidebarContent }: MainLayoutProps) => {
+  const chatsAreShown = useChatStore((state) => state.chatsAreShown);
   return (
     <div className="flex">
       <div className="w-full relative">
@@ -14,7 +16,9 @@ const MainLayout = ({ body, sidebarContent }: MainLayoutProps) => {
         <div className="mt-[64px] h-[calc(100vh-64px)]">{body}</div>
         <div>Footer</div>
       </div>
-      <div className="w-[350px]">{sidebarContent || "chats"}</div>
+      {chatsAreShown && (
+        <div className="w-[350px]">{sidebarContent || "chats"}</div>
+      )}
     </div>
   );
 };
