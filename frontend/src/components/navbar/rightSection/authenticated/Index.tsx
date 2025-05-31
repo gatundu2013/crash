@@ -1,5 +1,49 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar1 from "../../../../assets/avatar.png";
+import { Button } from "@/components/ui/button";
+import { RiChat1Fill, RiWallet3Line, RiUserSettingsLine } from "react-icons/ri";
+import useChatStore from "@/stores/chatStore";
+
 const NavAutheticated = () => {
-  return <div>NavAutheticated</div>;
+  const toggleChats = useChatStore((state) => state.toggleChats);
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 bg-layer-4 px-3 py-1.5 rounded-md hover:bg-layer-5 transition-colors cursor-pointer">
+        <RiWallet3Line className="text-green-1" />
+        <div>
+          <p className="text-xs text-white/70">Balance</p>
+          <h4 className="text-[15px] font-semibold flex items-baseline">
+            <span className="text-xs mr-1">KES</span>
+            <span>12.45</span>
+          </h4>
+        </div>
+      </div>
+
+      <Button variant="default" size="sm" className="font-medium">
+        Deposit
+      </Button>
+
+      <div className="relative">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="p-2"
+          onClick={toggleChats}
+        >
+          <RiChat1Fill className="text-xl" />
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+        <Avatar className="border-2 border-layer-5 h-9 w-9">
+          <AvatarImage src={Avatar1} alt="User avatar" />
+          <AvatarFallback className="bg-layer-4">AV</AvatarFallback>
+        </Avatar>
+        <RiUserSettingsLine className="text-white/70" />
+      </div>
+    </div>
+  );
 };
 
 export default NavAutheticated;
