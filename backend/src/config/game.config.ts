@@ -13,4 +13,7 @@ export const GAME_CONFIG: GameConfig = {
   MAX_STAKE: 500,
 
   MIN_AUTO_CASHOUT_MULTIPLIER: 1.01,
+
+  MAX_CLIENT_SEEDS: 3,
+  MAX_TOP_STAKERS: 30,
 };

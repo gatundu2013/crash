@@ -31,6 +31,8 @@ const bettingSchema = Joi.object<BettingPayload>({
       "number.greater": "Auto cashout multiplier must be greater than 0.",
       "number.min": `Auto cashout multiplier must be at least ${GAME_CONFIG.MIN_MULTIPLIER}.`,
     }),
+
+  clientSeed: Joi.string().allow(""),
 });
 
 export default bettingSchema;

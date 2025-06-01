@@ -11,6 +11,9 @@ export interface GameConfig {
   MAX_STAKE: number;
 
   MIN_AUTO_CASHOUT_MULTIPLIER: number;
+
+  MAX_CLIENT_SEEDS: number;
+  MAX_TOP_STAKERS: number;
 }
 
 export interface ProvablyFairOutcomeI {
@@ -25,7 +28,6 @@ export interface ProvablyFairOutcomeI {
 }
 
 export interface ClientSeedDetails {
-  username: string;
   seed: string;
   userId: string;
 }

@@ -1,3 +1,4 @@
+import { GAME_CONFIG } from "../../config/game.config";
 import { SingleBet } from "../../types/bet.types";
 import {
   ClientSeedDetails,
@@ -57,8 +58,38 @@ export class RoundStateManager {
     this.currentMultiplier = multiplier;
   }
 
-  public setClientSeed({ seed, userId, username }: ClientSeedDetails) {
-    this.clientSeedDetails.push({ seed, userId, username });
+  public addBet(bet: SingleBet) {
+    this.bets.set(bet.betId, bet);
+    this.totalBetAmount += bet.stake;
+
+    const isTopStakesFull =
+      this.topStakes.length >= GAME_CONFIG.MAX_TOP_STAKERS;
+    const lowestTopStake = this.topStakes[this.topStakes.length - 1];
+    const shouldAddToTopStakes =
+      !isTopStakesFull || bet.stake > lowestTopStake.stake;
+
+    if (shouldAddToTopStakes) {
+      this.topStakes.push(bet);
+      this.topStakes.sort((a, b) => b.stake - a.stake);
+
+      if (this.topStakes.length > 30) {
+        this.topStakes.pop();
+      }
+    }
+  }
+
+  public updateClientSeed({ userId, seed }: ClientSeedDetails) {
+    if (seed.trim().length < 5) return;
+
+    if (this.clientSeedDetails.length >= GAME_CONFIG.MAX_CLIENT_SEEDS) return;
+
+    const userSeedIsUsed = this.clientSeedDetails.some(
+      (entry) => entry.userId === userId
+    );
+
+    if (userSeedIsUsed) return;
+
+    this.clientSeedDetails.push({ seed, userId });
     this.clientSeed = `${this.clientSeed}${seed}`;
   }
 
