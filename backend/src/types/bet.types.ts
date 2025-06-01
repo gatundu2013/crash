@@ -5,5 +5,12 @@ export interface SingleBet {
   stake: number;
   payout: number | null;
   cashoutMultiplier: number | null;
-  autoCashoutValue: number | null;
+  autoCashoutMultiplier: number | null;
+  status: BetStatus;
+}
+
+export enum BetStatus {
+  WON = "won",
+  LOST = "lost",
+  PENDING = "pending",
 }
