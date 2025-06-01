@@ -4,12 +4,23 @@ import { BetStatus, BettingPayload, SingleBet } from "../../types/bet.types";
 import BetHistory from "../../models/betHistory.model";
 import { RoundStateManager } from "../game/roundStateManager";
 import { BettingError } from "../../utils/errors/bettingError";
+import { GamePhase } from "../../types/game.types";
 
 export async function placeBet(params: BettingPayload): Promise<void> {
   const session = await mongoose.startSession();
 
   try {
     session.startTransaction();
+
+    if (
+      RoundStateManager.getInstance().getState().gamePhase !== GamePhase.BETTING
+    ) {
+      throw new BettingError({
+        description: "Betting period has expired.",
+        httpCode: 400,
+        isOperational: true,
+      });
+    }
 
     const { stake, userId, autoCashoutMultiplier, clientSeed } = params;
 
