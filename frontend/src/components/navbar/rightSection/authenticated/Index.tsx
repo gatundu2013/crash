@@ -3,9 +3,11 @@ import Avatar1 from "../../../../assets/avatar.png";
 import { Button } from "@/components/ui/button";
 import { RiChat1Fill, RiWallet3Line, RiUserSettingsLine } from "react-icons/ri";
 import useChatStore from "@/stores/chatStore";
+import useAuthStore from "@/stores/authStore";
 
 const NavAutheticated = () => {
   const toggleChats = useChatStore((state) => state.toggleChats);
+  const userData = useAuthStore((state) => state.userData);
 
   return (
     <div className="flex items-center gap-3">
@@ -15,7 +17,7 @@ const NavAutheticated = () => {
           <p className="text-xs text-white/70">Balance</p>
           <h4 className="text-[15px] font-semibold flex items-baseline">
             <span className="text-xs mr-1">KES</span>
-            <span>12.45</span>
+            <span>{userData?.accountBalance.toFixed(2)}</span>
           </h4>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { handleTryCatchError } from "@/utils/tryCatchError";
 import { signUpSchema } from "@/validations/auth.validations";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm, type SubmitHandler } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const useSignUp = () => {
@@ -19,6 +20,7 @@ const useSignUp = () => {
     resolver: yupResolver(signUpSchema),
   });
   const authenticate = useAuthStore((state) => state.authenticate);
+  const navigate = useNavigate();
 
   const signUp: SubmitHandler<SignUpFormData> = async (
     data: SignUpFormData
@@ -29,6 +31,8 @@ const useSignUp = () => {
 
       authenticate(userData);
       toast.success("Account created");
+
+      navigate("/");
     } catch (error) {
       handleTryCatchError(error);
     }

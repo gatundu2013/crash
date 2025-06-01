@@ -6,6 +6,7 @@ import { handleTryCatchError } from "@/utils/tryCatchError";
 import { signInSchema } from "@/validations/auth.validations";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm, type SubmitHandler } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const useSignIn = () => {
@@ -17,6 +18,7 @@ const useSignIn = () => {
     resolver: yupResolver(signInSchema),
   });
   const authenticate = useAuthStore((state) => state.authenticate);
+  const navigate = useNavigate();
 
   const signIn: SubmitHandler<SignInFormData> = async (
     data: SignInFormData
@@ -27,6 +29,8 @@ const useSignIn = () => {
 
       authenticate(userData);
       toast.success("logged in successfully");
+
+      navigate("/");
     } catch (error) {
       handleTryCatchError(error);
     }

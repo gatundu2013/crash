@@ -3,7 +3,7 @@ import NavRightSection from "./rightSection/Index";
 
 const NavBar = () => {
   return (
-    <div className="absolute top-0 left-0 right-0 bg-layer-3 h-[62px] flex items-center justify-between px-2.5 md:px-8">
+    <div className="sticky top-0 left-0 right-0 z-50 bg-layer-3 h-[62px] flex items-center justify-between px-2.5 md:px-8">
       <NavLeftSection />
       <NavRightSection />
     </div>
