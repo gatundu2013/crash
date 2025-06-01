@@ -8,4 +8,9 @@ export const GAME_CONFIG: GameConfig = {
   CLIENT_SEED_REGEX: /^[a-zA-Z0-9]{6,}$/, // Only letters and numbers, minimum 6 characters
   DEFAULT_CLIENT_SEED: "actionAndSelfDiscipline", // Fallback client seed if invalid
   MULTIPLIER_GROWTH_RATE: 0.0045,
+
+  MIN_STAKE: 1,
+  MAX_STAKE: 500,
+
+  MIN_AUTO_CASHOUT_MULTIPLIER: 1.01,
 };

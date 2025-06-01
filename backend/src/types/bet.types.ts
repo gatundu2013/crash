@@ -1,5 +1,4 @@
 export interface SingleBet {
-  roundId: string;
   userId: string;
   betId: string;
   stake: number;
@@ -13,4 +12,10 @@ export enum BetStatus {
   WON = "won",
   LOST = "lost",
   PENDING = "pending",
+}
+
+export interface BettingPayload {
+  stake: number;
+  autoCashoutMultiplier: number | null;
+  userId: string;
 }

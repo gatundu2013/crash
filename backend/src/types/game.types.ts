@@ -6,6 +6,11 @@ export interface GameConfig {
   CLIENT_SEED_REGEX: RegExp;
   DEFAULT_CLIENT_SEED: string;
   MULTIPLIER_GROWTH_RATE: number;
+
+  MIN_STAKE: number;
+  MAX_STAKE: number;
+
+  MIN_AUTO_CASHOUT_MULTIPLIER: number;
 }
 
 export interface ProvablyFairOutcomeI {
