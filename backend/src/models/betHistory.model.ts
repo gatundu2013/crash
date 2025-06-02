@@ -11,9 +11,12 @@ const betHistorySchema = new Schema<BetHistoryDoc>(
     roundId: { type: String, required: true },
     userId: { type: String, required: true },
     stake: { type: Number, required: true },
-    payout: { type: Number, required: true },
-    cashoutMultiplier: { type: Number, required: true },
-    finalMultiplier: { type: Number, required: true },
+
+    // Allow nullable fields
+    payout: { type: Number, default: null },
+    cashoutMultiplier: { type: Number, default: null },
+    finalMultiplier: { type: Number, default: null },
+
     autoCashoutMultiplier: { type: Number, required: true },
     status: { type: String, required: true },
   },

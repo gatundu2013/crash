@@ -79,18 +79,20 @@ export class RoundStateManager {
   }
 
   public updateClientSeed({ userId, seed }: ClientSeedDetails) {
-    if (seed.trim().length < 5) return;
+    if (seed) {
+      if (seed.trim().length < 5) return;
 
-    if (this.clientSeedDetails.length >= GAME_CONFIG.MAX_CLIENT_SEEDS) return;
+      if (this.clientSeedDetails.length >= GAME_CONFIG.MAX_CLIENT_SEEDS) return;
 
-    const userSeedIsUsed = this.clientSeedDetails.some(
-      (entry) => entry.userId === userId
-    );
+      const userSeedIsUsed = this.clientSeedDetails.some(
+        (entry) => entry.userId === userId
+      );
 
-    if (userSeedIsUsed) return;
+      if (userSeedIsUsed) return;
 
-    this.clientSeedDetails.push({ seed, userId });
-    this.clientSeed = `${this.clientSeed}${seed}`;
+      this.clientSeedDetails.push({ seed, userId });
+      this.clientSeed = `${this.clientSeed}${seed}`;
+    }
   }
 
   //getters

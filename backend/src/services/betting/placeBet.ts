@@ -1,26 +1,28 @@
 import mongoose from "mongoose";
 import User from "../../models/user.model";
-import { BetStatus, BettingPayload, SingleBet } from "../../types/bet.types";
+import { BetStatus, BettingPayload } from "../../types/bet.types";
 import BetHistory from "../../models/betHistory.model";
 import { RoundStateManager } from "../game/roundStateManager";
 import { BettingError } from "../../utils/errors/bettingError";
 import { GamePhase } from "../../types/game.types";
 
-export async function placeBet(params: BettingPayload): Promise<void> {
+export async function placeBetService(
+  params: BettingPayload
+): Promise<{ success: boolean; newAccountBalance: number }> {
   const session = await mongoose.startSession();
 
   try {
     session.startTransaction();
 
-    if (
-      RoundStateManager.getInstance().getState().gamePhase !== GamePhase.BETTING
-    ) {
-      throw new BettingError({
-        description: "Betting period has expired.",
-        httpCode: 400,
-        isOperational: true,
-      });
-    }
+    // if (
+    //   RoundStateManager.getInstance().getState().gamePhase !== GamePhase.BETTING
+    // ) {
+    //   throw new BettingError({
+    //     description: "Betting period has expired.",
+    //     httpCode: 400,
+    //     isOperational: true,
+    //   });
+    // }
 
     const { stake, userId, autoCashoutMultiplier, clientSeed } = params;
 
@@ -42,6 +44,11 @@ export async function placeBet(params: BettingPayload): Promise<void> {
       });
     }
 
+    const newAccountBalance = user.accountBalance - stake;
+    user.accountBalance = newAccountBalance;
+
+    user.save({ session });
+
     // create bet history
     const newBet = await BetHistory.create(
       [
@@ -59,9 +66,6 @@ export async function placeBet(params: BettingPayload): Promise<void> {
       { session }
     );
 
-    // Deduct the stake from user balance
-    await user.updateOne({ $inc: { accountBalance: -stake } }, { session });
-
     await session.commitTransaction();
 
     RoundStateManager.getInstance().addBet({
@@ -78,6 +82,8 @@ export async function placeBet(params: BettingPayload): Promise<void> {
       seed: clientSeed,
       userId,
     });
+
+    return { success: true, newAccountBalance };
   } catch (err) {
     await session.abortTransaction();
 

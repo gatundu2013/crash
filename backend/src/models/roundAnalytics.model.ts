@@ -6,7 +6,6 @@ import { model } from "mongoose";
 export interface RoundAnalyticsDocument extends RoundAnalyticsI, Document {}
 
 const ClientSeedDetailsSchema = new Schema<ClientSeedDetails>({
-  username: { type: String, required: true },
   seed: { type: String, required: true },
   userId: { type: String, required: true },
 });
