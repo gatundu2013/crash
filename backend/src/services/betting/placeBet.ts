@@ -83,6 +83,8 @@ export async function placeBetService(
       userId,
     });
 
+    console.log(Date.now() / 1000);
+
     return { success: true, newAccountBalance };
   } catch (err) {
     await session.abortTransaction();

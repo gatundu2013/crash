@@ -11,6 +11,11 @@ export const SOCKET_EVENTS = {
       CRASHED: "game:crashed",
       ERROR: "game:error",
     },
+
+    BETTING: {
+      PLACE_BET_ERROR: "betting:placebetError",
+      BET_ID: "betting:betId",
+    },
   },
 
   LISTENERS: {
