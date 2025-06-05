@@ -12,9 +12,13 @@ class BettingManager {
   private static instance: BettingManager;
 
   private readonly MAX_BETS_PER_USER = 2;
+  private readonly MAX_BATCH_SIZE = 500;
 
   private stagedBetsMap: Map<string, StagedBet> = new Map(); // stages all incoming bets
   private userIdsToBetIds: Map<string, Set<string>> = new Map(); // for tracking how many bets a user has
+
+  private isProcessing = false;
+  private isBettingWindowOpen = false;
 
   private constructor() {}
 
@@ -26,6 +30,13 @@ class BettingManager {
   }
 
   public stageBet(params: BettingPayload, socket: Socket) {
+    if (!this.isBettingWindowOpen) {
+      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
+        message: "Betting window is closed",
+      });
+      return;
+    }
+
     if (this.userHasMaxBets(params.userId)) {
       socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
         message: "Max bet reached",
@@ -36,13 +47,32 @@ class BettingManager {
 
     const betId = uuidv4();
 
-    //update user bet tracking
-    const userBetsIds = this.userIdsToBetIds.get(params.userId) || new Set();
-    userBetsIds.add(betId);
+    //bet tracking update
+    const userBetIds = this.userIdsToBetIds.get(params.userId) || new Set();
+    userBetIds.add(betId);
+    this.userIdsToBetIds.set(params.userId, userBetIds);
 
     //stage bet
     const betToStage: StagedBet = { payload: { ...params, betId }, socket };
     this.stagedBetsMap.set(betId, betToStage);
+
+    this.processBatch();
+  }
+
+  public processBatch() {
+    if (
+      this.isProcessing ||
+      this.stagedBetsMap.size === 0 ||
+      !this.isBettingWindowOpen
+    ) {
+      return;
+    }
+
+    // step 1
+  }
+
+  public openBettingWindow() {
+    this.isBettingWindowOpen = true;
   }
 
   private userHasMaxBets(userId: string) {
