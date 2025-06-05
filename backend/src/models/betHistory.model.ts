@@ -4,10 +4,12 @@ import { SingleBet } from "../types/bet.types";
 interface BetHistoryDoc extends SingleBet, Document {
   roundId: string;
   finalMultiplier: number | null;
+  betId: string;
 }
 
 const betHistorySchema = new Schema<BetHistoryDoc>(
   {
+    betId: { type: String, requred: true },
     roundId: { type: String, required: true },
     userId: { type: String, required: true },
     stake: { type: Number, required: true },

@@ -13,6 +13,7 @@ export const SOCKET_EVENTS = {
     },
 
     BETTING: {
+      PLACE_BET_SUCCESS: "betting:placebetSuccess",
       PLACE_BET_ERROR: "betting:placebetError",
       BET_ID: "betting:betId",
     },
