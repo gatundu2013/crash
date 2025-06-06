@@ -86,27 +86,7 @@ class BettingManager {
   /** Interval ID for batch processing fallback mechanism */
   private batchProcessingInterval: NodeJS.Timeout | null = null;
 
-  private constructor() {
-    console.log("[BettingManager] Initialized with config:", this.config);
-    this.initializeBatchProcessing();
-  }
-
-  /**
-   * Initialize the batch processing fallback mechanism
-   */
-  private initializeBatchProcessing(): void {
-    // Fallback mechanism: Process batches every second to ensure no bets are stuck
-    // This acts as a safety net if the primary setImmediate triggers fail
-    this.batchProcessingInterval = setInterval(() => {
-      console.log("[BettingManager] setInterval trigger processBatch");
-      this.processBatch().catch((error) => {
-        console.error(
-          "[BettingManager] Error in interval batch processing:",
-          error
-        );
-      });
-    }, this.config.BATCH_PROCESSING_INTERVAL);
-  }
+  private constructor() {}
 
   public static getInstance(): BettingManager {
     if (!BettingManager.instance) {
@@ -492,11 +472,13 @@ class BettingManager {
   ): void {
     // Notify clients of successful bet placements with optimized data
     successfulBets.forEach(({ socket, payload, newAccountBalance }) => {
-      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_SUCCESS, {
-        message: "Bet placed successfully",
-        betId: payload.betId,
-        accountBalance: newAccountBalance,
-      });
+      if (socket) {
+        socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_SUCCESS, {
+          message: "Bet placed successfully",
+          betId: payload.betId,
+          accountBalance: newAccountBalance,
+        });
+      }
     });
 
     this.notifyFailedBets(failedBets, "Insufficient Balance");
@@ -507,10 +489,12 @@ class BettingManager {
    */
   private notifyFailedBets(failedBets: StagedBet[], reason: string): void {
     failedBets.forEach(({ socket, payload }: StagedBet): void => {
-      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
-        message: reason,
-        betId: payload.betId,
-      });
+      if (socket) {
+        socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
+          message: reason,
+          betId: payload.betId,
+        });
+      }
     });
   }
 
@@ -548,6 +532,25 @@ class BettingManager {
    */
   public openBettingWindow(): void {
     this.isBettingWindowOpen = true;
+
+    //clear any interval that may be there
+    if (this.batchProcessingInterval) {
+      clearInterval(this.batchProcessingInterval);
+      this.batchProcessingInterval = null;
+    }
+
+    // Fallback mechanism: Process batches every second to ensure no bets are stuck
+    // This acts as a safety net if the primary setImmediate triggers fail
+    this.batchProcessingInterval = setInterval(() => {
+      console.log("[BettingManager] setInterval trigger processBatch");
+      this.processBatch().catch((error) => {
+        console.error(
+          "[BettingManager] Error in interval batch processing:",
+          error
+        );
+      });
+    }, this.config.BATCH_PROCESSING_INTERVAL);
+
     console.log("[BettingManager] Betting window opened");
   }
 
@@ -557,11 +560,52 @@ class BettingManager {
    * This is called when a game round begins and no more bets should be accepted.
    *
    * ## Note:
-   * Bets that are already staged will still be processed if batch processing is in progress.`
+   * Bets that are already staged will still be processed if batch processing is in progress.
    */
   public closeBettingWindow(): void {
+    console.log("[closeBettingWindow] Closing betting window...");
     this.isBettingWindowOpen = false;
-    console.log("[BettingManager] Betting window closed");
+
+    // Stop the interval if it's running
+    if (this.batchProcessingInterval) {
+      clearInterval(this.batchProcessingInterval);
+      this.batchProcessingInterval = null;
+      console.log("[closeBettingWindow] Cleared batch processing interval.");
+    } else {
+      console.log(
+        "[closeBettingWindow] No batch processing interval to clear."
+      );
+    }
+
+    // Extract timed out bets
+    const timedoutBets = Array.from(this.stagedBetsMap.values());
+    console.log(
+      `[closeBettingWindow] Found ${timedoutBets.length} timed out staged bets.`
+    );
+
+    // Clear the maps
+    this.stagedBetsMap.clear();
+    this.userIdsToBetIds.clear();
+    console.log("[closeBettingWindow] Cleared staged bets and user ID maps.");
+
+    // Notify clients of timed out bets
+    timedoutBets.forEach((timeoutBet) => {
+      if (timeoutBet.socket) {
+        timeoutBet.socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
+          message: "Stage timeout",
+          betId: timeoutBet.payload?.betId,
+        });
+        console.log(
+          `[closeBettingWindow] Emitted timeout error for betId: ${timeoutBet.payload?.betId}`
+        );
+      } else {
+        console.log(
+          "[closeBettingWindow] Timeout bet missing socket, skipping emit."
+        );
+      }
+    });
+
+    console.log("[closeBettingWindow] Betting window closed successfully.");
   }
 
   /**

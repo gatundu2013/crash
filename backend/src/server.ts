@@ -14,7 +14,7 @@ for (let i = 0; i < 500; i++) {
   let userId = i % 2 ? userId1 : userId2;
 
   bettingManager.stageBet(
-    { autoCashoutMultiplier: 1, clientSeed: "dd", stake: 200, userId },
+    { autoCashoutMultiplier: 1, clientSeed: "dd", stake: 2, userId },
     socket
   );
 }
