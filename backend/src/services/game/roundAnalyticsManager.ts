@@ -3,35 +3,46 @@ import { GameError } from "../../utils/errors/gameError";
 import { roundStateManager } from "./roundStateManager";
 
 class RoundAnalyticsManager {
-  async saveRoundAnalytics() {
-    try {
-      const roundState = roundStateManager.getState();
+  async saveRoundAnalyticsWithRetries() {
+    const maxRetires = 3;
+    let retires = 0;
 
-      const newRoundAnalytics = new RoundAnalyticsModel({
-        roundId: roundState.roundId,
-        totalPlayers: roundState.bets.size,
-        roundPhase: roundState.gamePhase,
-        provablyFairOutcome: roundState.provablyFairOutcome,
-        financial: {
-          houseProfit: 0,
-          totalBetAmount: roundState.totalBetAmount,
-          totalCashoutAmount: 0,
-        },
-      });
+    while (retires < maxRetires) {
+      try {
+        const roundState = roundStateManager.getState();
 
-      console.log("Game analytics saved successfully");
+        const newRoundAnalytics = new RoundAnalyticsModel({
+          roundId: roundState.roundId,
+          totalPlayers: roundState.betsMap.size,
+          roundPhase: roundState.gamePhase,
+          provablyFairOutcome: roundState.provablyFairOutcome,
+          financial: {
+            houseProfit: 0,
+            totalBetAmount: roundState.totalBetAmount,
+            totalCashoutAmount: 0,
+          },
+        });
 
-      newRoundAnalytics.save();
-    } catch (err) {
-      console.log("Failed to save game analytics", err);
+        await newRoundAnalytics.save();
+        break;
+      } catch (err) {
+        console.error("Failed to save game analytics", err);
 
-      throw new GameError({
-        httpCode: 500,
-        isOperational: false,
-        internalMessage: "Failed to save round Analytics",
-        description: "An error occured on our end. We are working on it",
-      });
+        retires++;
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * Math.pow(2, retires - 1))
+        );
+      }
     }
+
+    // At this point all retries have been exhausted
+    throw new GameError({
+      httpCode: 500,
+      isOperational: false,
+      internalMessage: "Failed to save round Analytics",
+      description: "An error occured on our end. We are working on it",
+    });
   }
 }
 
