@@ -46,7 +46,7 @@ class RoundStateManager {
     return RoundStateManager.instance;
   }
 
-  public generateRoundResults() {
+  public generateProvablyFairOutcome() {
     if (this.gamePhase !== GamePhase.PREPARING) {
       console.log(
         `Round results can only be generated in ${GamePhase.PREPARING} phase`
@@ -61,7 +61,6 @@ class RoundStateManager {
 
     this.provablyFairOutcome =
       multiplierGenerator.generateProvablyFairResults();
-    this.roundId = uuidv4();
   }
 
   private updateClientSeed({ userId, seed }: ClientSeedDetails) {
@@ -165,6 +164,7 @@ class RoundStateManager {
     this.provablyFairOutcome = null;
     this.activeBetsMap.clear();
     this.topStakers = [];
+    this.roundId = uuidv4();
   }
 }
 

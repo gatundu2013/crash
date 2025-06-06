@@ -52,7 +52,7 @@ class GameLifeCycleManager {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      roundStateManager.generateRoundResults();
+      roundStateManager.generateProvablyFairOutcome();
 
       // if they bets were placed for this round,save them.
       if (roundStateManager.getState().betsMap.size > 0) {
