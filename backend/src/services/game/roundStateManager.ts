@@ -10,6 +10,7 @@ import {
   GamePhase,
   ProvablyFairOutcomeI,
 } from "../../types/game.types";
+import { GameError } from "../../utils/errors/gameError";
 import { bettingManager } from "../betting/bettingManager";
 import { MultiplierGenerator } from "./multiplierGenerator";
 import { v4 as uuidv4 } from "uuid";
@@ -51,7 +52,13 @@ class RoundStateManager {
       console.log(
         `Round results can only be generated in ${GamePhase.PREPARING} phase`
       );
-      return;
+      throw new GameError({
+        description: "An error occured on our end. We are working on it",
+        httpCode: 500,
+        isOperational: false,
+        internalMessage: `Provably fair outcome generation 
+        attempted during invalid game phase: ${this.gamePhase}. Expected phase: ${GamePhase.PREPARING}.`,
+      });
     }
 
     const multiplierGenerator = new MultiplierGenerator({
