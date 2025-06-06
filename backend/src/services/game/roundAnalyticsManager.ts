@@ -1,11 +1,11 @@
 import RoundAnalyticsModel from "../../models/roundAnalytics.model";
 import { GameError } from "../../utils/errors/gameError";
-import { RoundStateManager } from "./roundStateManager";
+import { roundStateManager } from "./roundStateManager";
 
 class RoundAnalyticsManager {
   async saveRoundAnalytics() {
     try {
-      const roundState = RoundStateManager.getInstance().getState();
+      const roundState = roundStateManager.getState();
 
       const newRoundAnalytics = new RoundAnalyticsModel({
         roundId: roundState.roundId,

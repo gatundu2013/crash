@@ -3,6 +3,7 @@ export const SOCKET_EVENTS = {
     //game
     BROADCAST_HASHED_SERVER_SEED: "broadcastHashedServerSeed",
     BROADCAST_CURRENT_MULTIPLIER: "broadcastCurrentMultiplier",
+    BROADCAST_NEXT_GAME_COUNT_DOWN: "broadcastNextGameCountDown",
 
     GAME_PHASE: {
       PREPARING: "game:preparing",

@@ -5,7 +5,6 @@ import { router } from "./routes/v1";
 import { Server } from "socket.io";
 import { createServer } from "http";
 import { SocketManager } from "./services/socket/socketManager";
-import { GameLifeCycleManager } from "./services/game/gameLifeCyleManager";
 import { corsOptions } from "./config/cors.config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -37,7 +36,6 @@ async function startServer() {
     // Initialize socket connections
     const socketManager = new SocketManager(io);
     socketManager.initializeSocketConnection();
-    GameLifeCycleManager.getInstance().startGame();
 
     httpServer.listen(process.env.PORT!, () => {
       console.log("The server is running on port 4000");
