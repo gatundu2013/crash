@@ -8,12 +8,21 @@ import { roundStateManager } from "./roundStateManager";
 
 const roundAnalyticsManager = new RoundAnalyticsManager();
 
+/**
+ * GameLifeCycleManager ---> Responsible for staring and running each round
+ * --------------------
+ * Dependendent on:
+ * - bettingManager: Manages the betting window and bet processing.
+ * - roundStateManager: Maintains and resets state for each game round.
+ * - roundAnalyticsManager: Persists round analytics to the database.
+ * - io (socket.io): Emits game state updates and events to clients.
+ */
 class GameLifeCycleManager {
   private static instance: GameLifeCycleManager;
 
-  private readonly BETTING_PERIOD = 5;
-  private readonly COUNTDOWN_INTERVAL_MS = 100;
-  private readonly MULTIPLIER_INTERVAL_MS = 100;
+  private readonly BETTING_PERIOD = 5; // seconds
+  private readonly COUNTDOWN_INTERVAL_MS = 100; // milliseconds
+  private readonly MULTIPLIER_INTERVAL_MS = 100; // milliseconds
 
   private countdownIntervalId: NodeJS.Timeout | null = null;
   private multiplierTimeoutId: NodeJS.Timeout | null = null;
@@ -30,18 +39,22 @@ class GameLifeCycleManager {
 
   public async startGame() {
     try {
+      bettingManager.closeBettingWindow(); // no more bets are accepted
+
       roundStateManager.setGamePhase(GamePhase.PREPARING);
       io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.PREPARING, {
         gamePhase: GamePhase.PREPARING,
       });
 
-      // Wait until all bets finish processing before continuing.
+      // If they were bets being process before the betting window closed,
+      // wait for them to be processed
       while (bettingManager.getIsProcessing()) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       roundStateManager.generateRoundResults();
 
+      // if they bets were placed for this round,save them.
       if (roundStateManager.getState().betsMap.size > 0) {
         await roundAnalyticsManager.saveRoundAnalytics();
       }
@@ -54,6 +67,8 @@ class GameLifeCycleManager {
       this.incrementMultiplier();
     } catch (err) {
       console.error("Failed to run the game", err);
+
+      this.clearAllSchedulers(); //clear all events
 
       io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.ERROR, {
         message: "An error occurred on our end. We are working on it",
@@ -130,6 +145,13 @@ class GameLifeCycleManager {
         gamePhase: roundStateManager.getState().gamePhase,
       });
     }, this.COUNTDOWN_INTERVAL_MS);
+  }
+
+  private clearAllSchedulers() {
+    clearInterval(this.countdownIntervalId || "");
+    clearTimeout(this.multiplierTimeoutId || "");
+    this.countdownIntervalId = null;
+    this.multiplierTimeoutId = null;
   }
 }
 
