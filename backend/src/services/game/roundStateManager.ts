@@ -1,10 +1,16 @@
 import { GAME_CONFIG } from "../../config/game.config";
-import { SingleBet } from "../../types/bet.types";
+import {
+  AcceptedBet,
+  BetInMemory,
+  BetStatus,
+  TopStaker,
+} from "../../types/bet.types";
 import {
   ClientSeedDetails,
   GamePhase,
   ProvablyFairOutcomeI,
 } from "../../types/game.types";
+import { bettingManager } from "../betting/bettingManager";
 import { MultiplierGenerator } from "./multiplierGenerator";
 import { v4 as uuidv4 } from "uuid";
 
@@ -12,7 +18,7 @@ import { v4 as uuidv4 } from "uuid";
  * RoundStateManager - Singleton class to manage the state of a game round
  * This class can be accessed from anywhere in the application
  */
-export class RoundStateManager {
+class RoundStateManager {
   private static instance: RoundStateManager;
 
   private gamePhase: GamePhase = GamePhase.PREPARING;
@@ -22,11 +28,13 @@ export class RoundStateManager {
   private roundId: string | null = null;
   private provablyFairOutcome: ProvablyFairOutcomeI | null = null;
   private totalBetAmount: number = 0;
-  private bets: Map<string, SingleBet> = new Map();
-  private topStakes: SingleBet[] = [];
+  private activeBetsMap: Map<string, BetInMemory> = new Map(); // betId to Details
+  private topStakers: TopStaker[] = [];
 
   // Private constructor to prevent direct instantiation
-  private constructor() {}
+  private constructor() {
+    bettingManager.on("acceptedBets", this.handleAcceptedBets.bind(this));
+  }
 
   /**
    * Get the singleton instance of RoundState
@@ -49,36 +57,7 @@ export class RoundStateManager {
     this.roundId = uuidv4();
   }
 
-  // setters
-  public setGamePhase(gamePhase: GamePhase): void {
-    this.gamePhase = gamePhase;
-  }
-
-  public setCurrentMultiplier(multiplier: number): void {
-    this.currentMultiplier = multiplier;
-  }
-
-  public addBet(bet: SingleBet) {
-    this.bets.set(bet.betId, bet);
-    this.totalBetAmount += bet.stake;
-
-    const isTopStakesFull =
-      this.topStakes.length >= GAME_CONFIG.MAX_TOP_STAKERS;
-    const lowestTopStake = this.topStakes[this.topStakes.length - 1];
-    const shouldAddToTopStakes =
-      !isTopStakesFull || bet.stake > lowestTopStake.stake;
-
-    if (shouldAddToTopStakes) {
-      this.topStakes.push(bet);
-      this.topStakes.sort((a, b) => b.stake - a.stake);
-
-      if (this.topStakes.length > 30) {
-        this.topStakes.pop();
-      }
-    }
-  }
-
-  public updateClientSeed({ userId, seed }: ClientSeedDetails) {
+  private updateClientSeed({ userId, seed }: ClientSeedDetails) {
     if (seed) {
       if (seed.trim().length < 5) return;
 
@@ -95,6 +74,68 @@ export class RoundStateManager {
     }
   }
 
+  //add bets to the current Round state
+  private handleAcceptedBets(acceptedBets: AcceptedBet[]) {
+    acceptedBets.forEach((bet) => {
+      // Add bet in activeBetsMap
+      this.activeBetsMap.set(bet.payload.betId, {
+        bet: {
+          autoCashoutMultiplier: 1,
+          betId: bet.payload.betId,
+          cashoutMultiplier: 40,
+          payout: null,
+          userId: bet.payload.userId,
+          stake: bet.payload.stake,
+          status: BetStatus.PENDING,
+        },
+        socket: bet.socket,
+      });
+
+      this.totalBetAmount += bet.payload.stake;
+
+      // Handle top stakers logic
+      const isTopStakersListFull =
+        this.topStakers.length >= GAME_CONFIG.MAX_TOP_STAKERS;
+      const lowestTopStaker = this.topStakers[this.topStakers.length - 1];
+
+      const shouldAddToTopStakers =
+        !isTopStakersListFull ||
+        (lowestTopStaker && bet.payload.stake > lowestTopStaker.stake);
+
+      if (shouldAddToTopStakers) {
+        this.topStakers.push({
+          cashoutMultiplier: null,
+          betId: bet.payload.betId,
+          payout: null,
+          stake: bet.payload.stake,
+          username: bet.payload.username,
+        });
+
+        // Sort by stake descending
+        this.topStakers.sort((a, b) => b.stake - a.stake);
+
+        // Keep only the top MAX_TOP_STAKERS
+        if (this.topStakers.length > GAME_CONFIG.MAX_TOP_STAKERS) {
+          this.topStakers.pop();
+        }
+      }
+
+      this.updateClientSeed({
+        seed: bet.payload.clientSeed,
+        userId: bet.payload.userId,
+      });
+    });
+  }
+
+  // setters
+  public setGamePhase(gamePhase: GamePhase): void {
+    this.gamePhase = gamePhase;
+  }
+
+  public setCurrentMultiplier(multiplier: number): void {
+    this.currentMultiplier = multiplier;
+  }
+
   //getters
   public getState() {
     return {
@@ -102,10 +143,10 @@ export class RoundStateManager {
       currentMultiplier: this.currentMultiplier,
       roundId: this.roundId,
       provablyFairOutcome: this.provablyFairOutcome,
-      topStakes: this.topStakes,
+      topStakers: this.topStakers,
       clientSeedDetails: this.clientSeedDetails,
       clientSeed: this.clientSeed,
-      bets: this.bets,
+      betsMap: this.activeBetsMap,
       totalBetAmount: this.totalBetAmount,
     };
   }
@@ -115,7 +156,9 @@ export class RoundStateManager {
     this.currentMultiplier = 1;
     this.roundId = null;
     this.provablyFairOutcome = null;
-    this.bets.clear();
-    this.topStakes = [];
+    this.activeBetsMap.clear();
+    this.topStakers = [];
   }
 }
+
+export const roundStateManager = RoundStateManager.getInstance();
