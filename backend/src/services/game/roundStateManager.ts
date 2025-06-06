@@ -46,9 +46,16 @@ class RoundStateManager {
     return RoundStateManager.instance;
   }
 
-  public generateRoundResults(clientSeed: string) {
+  public generateRoundResults() {
+    if (this.gamePhase !== GamePhase.PREPARING) {
+      console.log(
+        `Round results can only be generated in ${GamePhase.PREPARING} phase`
+      );
+      return;
+    }
+
     const multiplierGenerator = new MultiplierGenerator({
-      clientSeed,
+      clientSeed: this.clientSeed,
       clientSeedDetails: this.clientSeedDetails,
     });
 

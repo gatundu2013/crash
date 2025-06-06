@@ -9,7 +9,7 @@ export const SOCKET_EVENTS = {
       PREPARING: "game:preparing",
       BETTING: "game:betting",
       RUNNING: "game:running",
-      CRASHED: "game:crashed",
+      END: "game:end",
       ERROR: "game:error",
     },
 

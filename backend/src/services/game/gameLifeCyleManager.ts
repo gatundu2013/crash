@@ -12,9 +12,11 @@ class GameLifeCycleManager {
   private static instance: GameLifeCycleManager;
 
   private readonly BETTING_PERIOD = 5;
-  private timeBeforeNextRound = this.BETTING_PERIOD;
+  private readonly COUNTDOWN_INTERVAL_MS = 100;
+  private readonly MULTIPLIER_INTERVAL_MS = 100;
 
   private countdownIntervalId: NodeJS.Timeout | null = null;
+  private multiplierTimeoutId: NodeJS.Timeout | null = null;
 
   private constructor() {}
 
@@ -33,14 +35,14 @@ class GameLifeCycleManager {
         gamePhase: GamePhase.PREPARING,
       });
 
-      console.log("Game Phase:", roundStateManager.getState().gamePhase);
+      // Wait until all bets finish processing before continuing.
+      while (bettingManager.getIsProcessing()) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
 
-      roundStateManager.generateRoundResults("");
-
-      console.log("RoundOutcome:", roundStateManager.getState());
+      roundStateManager.generateRoundResults();
 
       if (roundStateManager.getState().betsMap.size > 0) {
-        console.log("Saving Bets to db");
         await roundAnalyticsManager.saveRoundAnalytics();
       }
 
@@ -49,11 +51,9 @@ class GameLifeCycleManager {
         gamePhase: GamePhase.RUNNING,
       });
 
-      console.log("Game Phase:", roundStateManager.getState().gamePhase);
-
       this.incrementMultiplier();
     } catch (err) {
-      console.log("Failed to run the game", err);
+      console.error("Failed to run the game", err);
 
       io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.ERROR, {
         message: "An error occurred on our end. We are working on it",
@@ -61,54 +61,17 @@ class GameLifeCycleManager {
     }
   }
 
-  private incrementMultiplier = () => {
+  private incrementMultiplier() {
     const currentRoundState = roundStateManager.getState();
-
+    const currentMultiplier = currentRoundState.currentMultiplier;
     const incrementValue =
-      currentRoundState.currentMultiplier * GAME_CONFIG.MULTIPLIER_GROWTH_RATE;
-    const newMultiplier = currentRoundState.currentMultiplier + incrementValue;
+      currentMultiplier * GAME_CONFIG.MULTIPLIER_GROWTH_RATE;
+    const newMultiplier = currentMultiplier + incrementValue;
     const finalCrashPoint =
       currentRoundState.provablyFairOutcome?.finalMultiplier!;
 
-    console.log(newMultiplier, finalCrashPoint);
-
     if (newMultiplier >= finalCrashPoint) {
-      // Game ends
-      bettingManager.openBettingWindow();
-      roundStateManager.setGamePhase(GamePhase.BETTING);
-      this.timeBeforeNextRound = this.BETTING_PERIOD;
-
-      console.log("Game ended:", roundStateManager.getState().gamePhase);
-
-      // Clear previous interval if any
-      if (this.countdownIntervalId) {
-        clearInterval(this.countdownIntervalId);
-        this.countdownIntervalId = null;
-      }
-
-      this.countdownIntervalId = setInterval(() => {
-        this.timeBeforeNextRound -= 0.1;
-
-        if (this.timeBeforeNextRound <= 0) {
-          if (this.countdownIntervalId) {
-            clearInterval(this.countdownIntervalId);
-            this.countdownIntervalId = null;
-          }
-
-          bettingManager.closeBettingWindow();
-          console.log(bettingManager.getState());
-          roundStateManager.reset();
-          this.startGame();
-
-          return;
-        }
-
-        io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_NEXT_GAME_COUNT_DOWN, {
-          gamePhase: GamePhase.BETTING,
-          countDown: Math.max(this.timeBeforeNextRound, 0),
-        });
-      }, 100);
-
+      this.handleRoundEnd();
       return;
     }
 
@@ -120,10 +83,54 @@ class GameLifeCycleManager {
 
     console.log("Game Phase:", roundStateManager.getState().gamePhase);
 
-    setTimeout(() => {
+    this.multiplierTimeoutId = setTimeout(() => {
       this.incrementMultiplier();
-    }, 100);
-  };
+    }, this.MULTIPLIER_INTERVAL_MS);
+  }
+
+  private handleRoundEnd() {
+    if (this.multiplierTimeoutId) {
+      clearTimeout(this.multiplierTimeoutId);
+      this.multiplierTimeoutId = null;
+    }
+
+    //broadcast to all clients that the round has ended
+    io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.END, {
+      gamePhase: GamePhase.END,
+    });
+
+    roundStateManager.reset();
+
+    bettingManager.openBettingWindow();
+    roundStateManager.setGamePhase(GamePhase.BETTING);
+
+    const start = Date.now();
+
+    this.countdownIntervalId = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      const remaining = Math.max(this.BETTING_PERIOD - elapsed, 0);
+
+      io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_NEXT_GAME_COUNT_DOWN, {
+        gamePhase: GamePhase.BETTING,
+        countDown: remaining,
+      });
+
+      if (remaining <= 0) {
+        if (this.countdownIntervalId) {
+          clearInterval(this.countdownIntervalId);
+          this.countdownIntervalId = null;
+        }
+
+        bettingManager.closeBettingWindow();
+        this.startGame();
+      }
+
+      io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_NEXT_GAME_COUNT_DOWN, {
+        countDown: remaining,
+        gamePhase: roundStateManager.getState().gamePhase,
+      });
+    }, this.COUNTDOWN_INTERVAL_MS);
+  }
 }
 
 export const gameLifeCycleManager = GameLifeCycleManager.getInstance();

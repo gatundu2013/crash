@@ -35,7 +35,7 @@ export interface ClientSeedDetails {
 export enum GamePhase {
   PREPARING = "preparing",
   RUNNING = "running",
-  CRASHED = "crashed",
+  END = "end",
   BETTING = "betting",
   ERROR = "error",
 }

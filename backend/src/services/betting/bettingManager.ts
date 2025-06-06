@@ -472,7 +472,6 @@ class BettingManager extends EventEmitter {
       if (timeoutBet.socket) {
         timeoutBet.socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
           message: "Stage timeout",
-          betId: timeoutBet.payload?.betId,
         });
       }
     });
@@ -530,8 +529,8 @@ class BettingManager extends EventEmitter {
     return existingBets.size >= this.config.MAX_BETS_PER_USER;
   }
 
-  public getState() {
-    return BettingManager.instance;
+  public getIsProcessing() {
+    return this.isProcessing;
   }
 }
 
