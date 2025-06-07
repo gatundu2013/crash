@@ -33,6 +33,7 @@ export interface ClientSeedDetails {
 }
 
 export enum GamePhase {
+  IDLE = "idle",
   PREPARING = "preparing",
   RUNNING = "running",
   END = "end",
