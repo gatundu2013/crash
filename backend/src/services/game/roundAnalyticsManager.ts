@@ -1,47 +1,51 @@
 import RoundAnalyticsModel from "../../models/roundAnalytics.model";
+import { RoundAnalyticsI } from "../../types/roundAnalytics.types";
 import { GameError } from "../../utils/errors/gameError";
-import { roundStateManager } from "./roundStateManager";
 
 class RoundAnalyticsManager {
-  async saveRoundAnalyticsWithRetries() {
-    const maxRetires = 3;
-    let retires = 0;
+  async saveCompleteRoundResultsWithRetries(roundData: RoundAnalyticsI) {
+    const maxRetries = 3;
+    let retries = 0;
 
-    while (retires < maxRetires) {
+    while (retries < maxRetries) {
       try {
-        const roundState = roundStateManager.getState();
-
         const newRoundAnalytics = new RoundAnalyticsModel({
-          roundId: roundState.roundId,
-          totalPlayers: roundState.betsMap.size,
-          roundPhase: roundState.gamePhase,
-          provablyFairOutcome: roundState.provablyFairOutcome,
+          roundId: roundData.roundId,
+          totalPlayers: roundData.totalPlayers,
+          roundPhase: roundData.roundPhase,
+          provablyFairOutcome: roundData.provablyFairOutcome,
           financial: {
             houseProfit: 0,
-            totalBetAmount: roundState.totalBetAmount,
+            totalBetAmount: roundData.financial.totalCashoutAmount,
             totalCashoutAmount: 0,
           },
         });
 
         await newRoundAnalytics.save();
-        break;
+        return; // Success - exit
       } catch (err) {
-        console.error("Failed to save game analytics", err);
+        console.error(
+          `Failed to save game analytics (attempt ${
+            retries + 1
+          }/${maxRetries})`,
+          err
+        );
 
-        retires++;
+        retries++;
 
+        // Exponential backoff: 1s, 2s, 4s
         await new Promise((resolve) =>
-          setTimeout(resolve, 1000 * Math.pow(2, retires - 1))
+          setTimeout(resolve, 1000 * Math.pow(2, retries - 1))
         );
       }
     }
 
-    // At this point all retries have been exhausted
+    // Only throw if all retries have been exhausted
     throw new GameError({
       httpCode: 500,
       isOperational: false,
-      internalMessage: "Failed to save round Analytics",
-      description: "An error occured on our end. We are working on it",
+      internalMessage: "Failed to save round Analytics after all retries",
+      description: "An error occurred on our end. We are working on it",
     });
   }
 }
