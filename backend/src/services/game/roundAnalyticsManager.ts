@@ -40,7 +40,7 @@ class RoundAnalyticsManager {
       }
     }
 
-    // Only throw if all retries have been exhausted
+    // Throw if all retries have been exhausted
     throw new GameError({
       httpCode: 500,
       isOperational: false,

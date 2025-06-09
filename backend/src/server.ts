@@ -1,15 +1,10 @@
 import { startServer } from "./app";
 import { bettingManager } from "./services/betting/bettingManager";
-import { roundStateManager } from "./services/game/roundStateManager";
-
-// gameLifeCycleManager.startGame()
-//
-// ;
+import { gameLifeCycleManager } from "./services/game/gameLifeCycleManager";
 
 startServer();
-roundStateManager.getState();
 
-bettingManager.openBettingWindow();
+gameLifeCycleManager.startGame();
 
 const userId1 = "683ca86b63cbd1368d7b225d";
 const userId2 = "683d41bdc7757ef6d4b7af4e";
@@ -21,7 +16,7 @@ for (let i = 0; i < 4; i++) {
   bettingManager.stageBet(
     {
       autoCashoutMultiplier: 1,
-      clientSeed: "inGodWetrust",
+      clientSeed: "inGodWeTust",
       stake: 2,
       userId,
       username: "brian",

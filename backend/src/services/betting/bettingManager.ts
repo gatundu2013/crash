@@ -13,7 +13,8 @@ import User from "../../models/user.model";
 import mongoose, { AnyBulkWriteOperation } from "mongoose";
 import BetHistory from "../../models/betHistory.model";
 import { AccountStatus } from "../../types/user.types";
-import { EventEmitter } from "events";
+import { EVENT_NAMES, eventBus } from "../eventBus";
+import { GameError } from "../../utils/errors/gameError";
 
 /**
  * BettingManager handles high-volume bet processing using a staged approach with batch processing.
@@ -24,7 +25,8 @@ import { EventEmitter } from "events";
  * 2. **Batch Processing**: Staged bets are processed in batches using database transactions
  * 3. **Client Notification**: Results are communicated back to clients via WebSocket
  */
-class BettingManager extends EventEmitter {
+class BettingManager {
+  // No longer extends EventEmitter
   private static instance: BettingManager;
 
   private readonly config = {
@@ -54,9 +56,7 @@ class BettingManager extends EventEmitter {
   /** Interval ID for batch processing fallback mechanism */
   private batchProcessingInterval: NodeJS.Timeout | null = null;
 
-  private constructor() {
-    super();
-  }
+  private constructor() {}
 
   public static getInstance(): BettingManager {
     if (!BettingManager.instance) {
@@ -204,7 +204,7 @@ class BettingManager extends EventEmitter {
         failedBets.length
       );
 
-      this.emit("acceptedBets", acceptedBets);
+      eventBus.emit(EVENT_NAMES.BETS_ACCEPTED, acceptedBets);
 
       return acceptedBets.map(({ payload }) => payload.betId);
     } catch (error) {
@@ -527,6 +527,51 @@ class BettingManager extends EventEmitter {
     if (!existingBets) return false;
 
     return existingBets.size >= this.config.MAX_BETS_PER_USER;
+  }
+
+  /**
+   * Updates all uncashed (non-winning) bets for a given game round by marking them as LOST.
+   *
+   * This function finds all bets in the `BetHistory` collection that belong to the specified
+   * round and have a status other than WON. It then sets their status to LOST.
+   *
+   * If the update operation fails or is not acknowledged by the database, a GameError is thrown.
+   *
+   * @param roundId - The unique identifier of the game round whose uncashed bets should be busted.
+   * @returns A promise that resolves to the result of the update operation,
+   *          including the number of modified documents.
+   * @throws GameError - If the database operation fails or is not acknowledged.
+   */
+  public async bustUncashedBets(roundId: string) {
+    try {
+      const results = await BetHistory.updateMany(
+        { roundId, status: { $ne: BetStatus.WON } },
+        {
+          $set: {
+            status: BetStatus.LOST,
+          },
+        }
+      );
+
+      if (!results.acknowledged) {
+        throw new GameError({
+          description: "An error occured on our side. We are working on it",
+          internalMessage: "Failed to bust uncashed bets",
+          httpCode: 500,
+          isOperational: false,
+        });
+      }
+
+      return results;
+    } catch (err) {
+      console.error("Failed to bust uncashed bets:", err);
+      throw new GameError({
+        description: "An error occured on our side. We are working on it",
+        internalMessage: "Failed to bust uncashed bets",
+        httpCode: 500,
+        isOperational: false,
+      });
+    }
   }
 
   public getIsProcessing() {

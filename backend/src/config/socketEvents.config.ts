@@ -4,6 +4,7 @@ export const SOCKET_EVENTS = {
     BROADCAST_HASHED_SERVER_SEED: "broadcastHashedServerSeed",
     BROADCAST_CURRENT_MULTIPLIER: "broadcastCurrentMultiplier",
     BROADCAST_NEXT_GAME_COUNT_DOWN: "broadcastNextGameCountDown",
+    BROADCAST_TOP_STAKERS: "broadcastLiveBets",
 
     GAME_PHASE: {
       PREPARING: "game:preparing",
@@ -17,6 +18,9 @@ export const SOCKET_EVENTS = {
       PLACE_BET_SUCCESS: "betting:placebetSuccess",
       PLACE_BET_ERROR: "betting:placebetError",
       BET_ID: "betting:betId",
+
+      CASHOUT_ERROR: "cashout:cashoutError",
+      CASHOUT_SUCCESS: "cashout:cashoutSuccess",
     },
   },
 

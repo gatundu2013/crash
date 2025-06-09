@@ -11,14 +11,14 @@ import { GamePhase } from "../../types/game.types";
 import User from "../../models/user.model";
 import BetHistory from "../../models/betHistory.model";
 import mongoose, { AnyBulkWriteOperation } from "mongoose";
-import { EventEmitter } from "events";
-import { GameError } from "../../utils/errors/gameError";
+import { eventBus, EVENT_NAMES } from "../eventBus";
 
 /**
  * CashoutManager handles high-volume cashout processing using batch operations.
  * Similar to BettingManager but handles cashout requests instead of new bets.
  */
-class CashoutManager extends EventEmitter {
+class CashoutManager {
+  // No longer extends EventEmitter
   private static instance: CashoutManager;
 
   private readonly config = {
@@ -39,9 +39,7 @@ class CashoutManager extends EventEmitter {
   /** Interval for batch processing fallback */
   private batchProcessingInterval: NodeJS.Timeout | null = null;
 
-  private constructor() {
-    super();
-  }
+  private constructor() {}
 
   public static getInstance(): CashoutManager {
     if (!CashoutManager.instance) {
@@ -167,7 +165,7 @@ class CashoutManager extends EventEmitter {
         failedCashouts.length
       );
 
-      this.emit("cashoutsProcessed", successfulCashouts);
+      eventBus.emit(EVENT_NAMES.CASHOUTS_PROCESSED, successfulCashouts);
 
       return successfulCashouts.map((cashout) => cashout.betId);
     } catch (error) {

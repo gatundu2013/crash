@@ -55,3 +55,17 @@ export interface TopStaker
   extends Omit<SingleBet, "userId" | "status" | "autoCashoutMultiplier"> {
   username: string;
 }
+
+// =============================
+//      CASHOUT MANAGER
+//==============================
+export interface CashoutPayload {
+  betId: string;
+}
+export interface StagedCashout extends CashoutPayload {
+  userId: string;
+  cashoutMultiplier: number;
+  stake: number;
+  socket: Socket;
+  payout: number;
+}

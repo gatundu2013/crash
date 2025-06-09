@@ -3,6 +3,7 @@ import { GAME_CONFIG } from "../../config/game.config";
 import { SOCKET_EVENTS } from "../../config/socketEvents.config";
 import { GamePhase } from "../../types/game.types";
 import { bettingManager } from "../betting/bettingManager";
+import { cashoutManager } from "../betting/cashoutManager";
 import RoundAnalyticsManager from "./roundAnalyticsManager";
 import { roundStateManager } from "./roundStateManager";
 
@@ -14,7 +15,7 @@ const roundAnalyticsManager = new RoundAnalyticsManager();
  *
  * This singleton class manages the entire flow of the game:
  * 1. Betting Phase: Players place bets during a timed window
- * 2. Preparing Phase: System generates outcomes and processes bets
+ * 2. Preparing Phase: System generates round outcome and save them to db
  * 3. Running Phase: Multiplier increases until predetermined crash point
  * 4. End Phase: Round concludes, payouts processed, cycle repeats
  *
@@ -40,9 +41,7 @@ class GameLifeCycleManager {
 
   private constructor() {}
 
-  /**
-   * Singleton pattern implementation -- one instance of the game across the app
-   */
+  // Singleton pattern
   public static getInstance() {
     if (!GameLifeCycleManager.instance) {
       GameLifeCycleManager.instance = new GameLifeCycleManager();
@@ -53,7 +52,7 @@ class GameLifeCycleManager {
 
   /**
    * Initiates a new game round with proper sequence of operations
-   * 1. Closes betting window and waits for pending bets
+   * 1. Closes betting window and waits for processing bets to finish
    * 2. Generates provably fair outcome for the round
    * 3. Saves analytics data if bets were placed
    * 4. Starts the multiplier increment cycle
@@ -80,7 +79,19 @@ class GameLifeCycleManager {
 
       // Persist round data to database if any bets were placed
       if (roundStateManager.getState().betsMap.size > 0) {
-        await roundAnalyticsManager.saveRoundAnalyticsWithRetries();
+        const roundState = roundStateManager.getState();
+
+        await roundAnalyticsManager.saveCompleteRoundResultsWithRetries({
+          roundId: roundState.roundId!,
+          totalPlayers: roundState.betsMap.size,
+          roundPhase: roundState.gamePhase!,
+          provablyFairOutcome: roundState.provablyFairOutcome!,
+          financial: {
+            houseProfit: 0,
+            totalBetAmount: roundState.totalBetAmount,
+            totalCashoutAmount: 0,
+          },
+        });
       }
 
       // Transition to running phase and notify all clients
@@ -150,7 +161,7 @@ class GameLifeCycleManager {
    * 3. Processes any remaining bets (busts uncashed bets)
    * 4. Resets game state and opens betting for next round
    */
-  private handleRoundEnd() {
+  private async handleRoundEnd() {
     // Clean up multiplier increment timer to prevent memory leaks
     if (this.multiplierTimeoutId) {
       clearTimeout(this.multiplierTimeoutId);
@@ -164,8 +175,16 @@ class GameLifeCycleManager {
         roundStateManager.getState().provablyFairOutcome?.finalMultiplier,
     });
 
-    // Process remaining bets - all uncashed bets are now busted
-    // TODO: Add explicit bet processing logic here
+    //Wait for all cashouts to complete
+    const cashoutsState = cashoutManager.getState();
+    while (cashoutsState.isProcessing || cashoutsState.stagedCashoutsSize > 0) {
+      await new Promise((resolve) => setTimeout(() => resolve, 100));
+    }
+
+    // Bust all bets that were not cashedout
+    await bettingManager.bustUncashedBets(
+      roundStateManager.getState().roundId!
+    );
 
     // Reset game state for the next round
     roundStateManager.reset();
@@ -191,12 +210,6 @@ class GameLifeCycleManager {
       // Calculate elapsed time and remaining betting time
       const elapsed = (Date.now() - start) / 1000;
       const remaining = Math.max(this.BETTING_WINDOW - elapsed, 0);
-
-      // Broadcast countdown to all clients for real-time updates
-      io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_NEXT_GAME_COUNT_DOWN, {
-        gamePhase: GamePhase.BETTING,
-        countDown: remaining,
-      });
 
       // When countdown reaches zero, close betting and start next round
       if (remaining <= 0) {
