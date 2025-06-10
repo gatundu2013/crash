@@ -1,3 +1,4 @@
+import { GAME_CONFIG } from "@/config/gameConfig.cofig";
 import { create } from "zustand";
 
 export interface BetStoreI {
@@ -15,10 +16,10 @@ export interface BetStoreI {
 //factory function
 const createBetStore = () => {
   return create<BetStoreI>((set) => ({
-    stake: 10,
+    stake: GAME_CONFIG.MIN_STAKE,
     hasAutoBet: false,
     hasAutoCashout: false,
-    autoCashoutValue: 1.01,
+    autoCashoutValue: GAME_CONFIG.MIN_AUTO_CASHOUT_VALUE,
 
     setStake(stake: number) {
       set({ stake });
