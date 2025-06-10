@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-interface BetStoreI {
+export interface BetStoreI {
   stake: number;
   hasAutoBet: boolean;
   hasAutoCashout: boolean;
@@ -12,6 +12,7 @@ interface BetStoreI {
   setAutoCashoutValue: (autoCashoutValue: number) => void;
 }
 
+//factory function
 const createBetStore = () => {
   return create<BetStoreI>((set) => ({
     stake: 10,
@@ -34,4 +35,8 @@ const createBetStore = () => {
   }));
 };
 
-export default createBetStore;
+//Two bet buttons
+export const betStores = [
+  { id: 1, useStore: createBetStore() },
+  { id: 2, useStore: createBetStore() },
+];
