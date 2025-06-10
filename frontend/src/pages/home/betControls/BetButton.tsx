@@ -1,0 +1,13 @@
+import { Button } from "@/components/ui/button";
+
+const BetButton = () => {
+  return (
+    <div className="w-full mt-0.5">
+      <Button className="w-full h-10.5 text-md font-semibold">
+        Bet 10.00 KSH
+      </Button>
+    </div>
+  );
+};
+
+export default BetButton;
