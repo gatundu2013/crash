@@ -1,5 +1,10 @@
 export const SOCKET_EVENTS = {
-  EMITTERS: {},
+  EMITTERS: {
+    BETTING: {
+      PLACE_BET: "game:placeBet",
+      CASHOUT: "game:cashout",
+    },
+  },
 
   LISTENERS: {
     CONNECT: "connection",

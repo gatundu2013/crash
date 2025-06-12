@@ -5,3 +5,8 @@ export interface BettingPayload {
   clientSeed: string;
   username: string;
 }
+
+export interface SuccessfulBetRes {
+  betId: string;
+  accountBalance: number;
+}

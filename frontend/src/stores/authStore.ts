@@ -7,6 +7,8 @@ interface AuthStoreI {
 
   authenticate: (userData: UserI) => void;
   deAuthenticate: () => void;
+
+  updateUserData: (newData: Partial<UserI>) => void;
 }
 
 const useAuthStore = create<AuthStoreI>((set) => ({
@@ -19,6 +21,14 @@ const useAuthStore = create<AuthStoreI>((set) => ({
 
   deAuthenticate() {
     set({ isAuthenticated: false, userData: null });
+  },
+
+  updateUserData(newData: Partial<UserI>) {
+    set((state) => ({
+      userData: state.userData
+        ? { ...state.userData, ...newData }
+        : state.userData,
+    }));
   },
 }));
 
