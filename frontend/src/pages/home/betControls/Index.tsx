@@ -3,7 +3,7 @@ import BetController from "./BetControllers";
 
 const BetGrid = () => {
   return (
-    <div className="flex justify-center mx-auto items-center space-x-3 w-full">
+    <div className="flex flex-col md:flex-row justify-center mx-auto items-center space-x-2 w-full">
       {betStores.map(({ useStore, id }) => {
         return <BetController key={id} useStore={useStore} />;
       })}

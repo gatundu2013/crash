@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { GAME_CONFIG } from "@/config/gameConfig.cofig";
+import { GAME_CONFIG } from "@/config/game.cofig";
 import type { BetStoreI } from "@/stores/betStore";
 import { useState, type ChangeEvent } from "react";
 import { RxCross1 } from "react-icons/rx";
@@ -24,47 +24,37 @@ const Autos = ({
   setAutoBet,
   setAutoCashout,
 }: AutosProps) => {
-  const [autoCashoutMultiplier, setAutoCashoutMultiplier] = useState(
-    autoCashoutValue.toFixed(2)
-  );
+  const [displayValue, setDisplayValue] = useState(autoCashoutValue.toFixed(2));
 
-  const handleAutoCashoutMultiplierChange = (
-    e: ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = e.target.value;
-
-    if (GAME_CONFIG.INPUT_REGEX.test(value)) {
-      setAutoCashoutMultiplier(value);
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (GAME_CONFIG.INPUT_REGEX.test(val)) {
+      setDisplayValue(val);
     }
   };
 
-  const handleAutoCashoutMultiplierBlur = () => {
-    const parsed = parseFloat(autoCashoutMultiplier);
-
+  const handleInputBlur = () => {
+    const parsed = parseFloat(displayValue);
     if (Number.isNaN(parsed)) {
-      setAutoCashoutMultiplier(GAME_CONFIG.MIN_AUTO_CASHOUT_VALUE.toFixed(2));
+      const fallback = GAME_CONFIG.MIN_AUTO_CASHOUT_VALUE.toFixed(2);
+      setDisplayValue(fallback);
       return;
     }
 
-    if (parsed < GAME_CONFIG.MIN_AUTO_CASHOUT_VALUE) {
-      setAutoCashoutMultiplier(GAME_CONFIG.MIN_AUTO_CASHOUT_VALUE.toFixed(2));
-      setAutoCashoutValue(GAME_CONFIG.MIN_AUTO_CASHOUT_VALUE);
-      return;
-    }
-
-    setAutoCashoutMultiplier(parsed.toFixed(2));
-    setAutoCashoutValue(parsed);
+    const clamped = Math.max(parsed, GAME_CONFIG.MIN_AUTO_CASHOUT_VALUE);
+    setDisplayValue(clamped.toFixed(2));
+    setAutoCashoutValue(clamped);
   };
+
+  const toggleAutoBet = () => setAutoBet(!hasAutoBet);
+  const toggleAutoCashout = () => setAutoCashout(!hasAutoCashout);
 
   return (
-    <div className="flex justify-between items-center text-white mt-1">
+    <div className="flex justify-between items-center text-white">
       {/* AutoBet */}
       <div className="flex gap-1.5 items-center">
         <h4 className="text-sm">AutoBet</h4>
-        <Switch
-          checked={hasAutoBet}
-          onCheckedChange={() => setAutoBet(!hasAutoBet)}
-        />
+        <Switch checked={hasAutoBet} onCheckedChange={toggleAutoBet} />
       </div>
 
       {/* Auto Cashout */}
@@ -73,19 +63,18 @@ const Autos = ({
           <h4 className="text-sm">Auto Cashout</h4>
           <Switch
             checked={hasAutoCashout}
-            onCheckedChange={() => setAutoCashout(!hasAutoCashout)}
+            onCheckedChange={toggleAutoCashout}
           />
         </div>
-        <div className="flex items-center bg-layer-1 w-16 h-6 rounded-full">
+        <div className="flex items-center bg-layer-1 w-16 h-7 rounded-full">
           <Input
-            onBlur={handleAutoCashoutMultiplierBlur}
-            onChange={handleAutoCashoutMultiplierChange}
-            value={autoCashoutMultiplier}
+            onBlur={handleInputBlur}
+            onChange={handleInputChange}
+            value={displayValue}
             className="w-full rounded-full px-1.5 font-medium h-full text-center border-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none text-white text-xs"
           />
-          <button className="mr-1 text-white/60 hover:text-white transition-colors">
-            <RxCross1 size={10} />
-          </button>
+
+          <RxCross1 size={12} className="mr-1" />
         </div>
       </div>
     </div>

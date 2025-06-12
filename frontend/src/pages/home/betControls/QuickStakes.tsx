@@ -1,20 +1,30 @@
 import { Button } from "@/components/ui/button";
+import { GAME_CONFIG } from "@/config/game.cofig";
 import type { BetStoreI } from "@/stores/betStore";
 
 interface QuickStakeProps extends Pick<BetStoreI, "setStake"> {}
 
 const QuickStakes = ({ setStake }: QuickStakeProps) => {
-  const defaultStakes = [10, 50, 100, 1000];
+  const predefinedStakes = [
+    GAME_CONFIG.MIN_STAKE,
+    50,
+    100,
+    GAME_CONFIG.MAX_STAKE,
+  ];
+
+  const handleStakeSelection = (selectedStakeAmount: number) => {
+    setStake(selectedStakeAmount);
+  };
 
   return (
-    <div className="grid grid-cols-4 gap-1">
-      {defaultStakes.map((value, index) => (
+    <div className="flex gap-1.5">
+      {predefinedStakes.map((stakeAmount, index) => (
         <Button
-          onClick={() => setStake(value)}
+          onClick={() => handleStakeSelection(stakeAmount)}
           key={index}
-          className="h-5 flex-1 px-3 bg-layer-2 border border-white/10 text-white/80 py-3 rounded-full hover:bg-layer-3 transition-colors"
+          className="h-6 w-full font-normal flex-1 px-3 bg-layer-2 text-white/80 rounded-full transition-colors"
         >
-          {value.toFixed(2)}
+          {stakeAmount.toFixed(2)}
         </Button>
       ))}
     </div>
