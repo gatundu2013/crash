@@ -12,5 +12,14 @@ export const SOCKET_EVENTS = {
       END: "game:end",
       ERROR: "game:error",
     },
+
+    BETTING: {
+      PLACE_BET_SUCCESS: "betting:placebetSuccess",
+      PLACE_BET_ERROR: "betting:placebetError",
+      BET_ID: "betting:betId",
+
+      CASHOUT_ERROR: "cashout:cashoutError",
+      CASHOUT_SUCCESS: "cashout:cashoutSuccess",
+    },
   },
 };

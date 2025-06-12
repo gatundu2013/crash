@@ -10,8 +10,8 @@ const values = [
 
 const PreviousMultipliers = () => {
   return (
-    <div className="bg-layer-4 py-1 rounded-lg  mx-auto flex gap-2 items-center">
-      <div className="overflow-x-hidden flex-1">
+    <div className="w-full bg-layer-3 px-2 py-1 rounded-lg mx-auto flex gap-2 items-center">
+      <div className="w-full overflow-x-hidden flex-1">
         <div className="flex px-4 gap-4 min-w-max">
           {values.map((value, index) => (
             <div

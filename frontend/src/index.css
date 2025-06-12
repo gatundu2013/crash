@@ -65,7 +65,25 @@
 body {
   background-color: var(--layer-1);
   color: white;
-  max-width: 100vw;
+}
+
+/* Targets the entire scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+/* Background of the scrollbar track */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--layer-6);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  cursor: pointer;
 }
 
 @theme {

@@ -16,7 +16,7 @@ const BetController = ({ useStore }: BetControllerProps) => {
   const containerClass = "max-w-[350px] mx-auto px-2";
 
   return (
-    <div className="bg-layer-4 flex-1 pt-3 rounded-xl">
+    <div className="bg-layer-4 w-full flex-1 pt-3 rounded-xl">
       <div className={`${containerClass} space-y-2`}>
         <div className="space-y-1">
           <StakeInput stake={store.stake} setStake={store.setStake} />
@@ -30,7 +30,7 @@ const BetController = ({ useStore }: BetControllerProps) => {
         />
       </div>
 
-      <div className="border-t border-white/15 mt-2.5 py-2.5">
+      <div className="border-t border-white/10 mt-2.5 py-2">
         <div className={containerClass}>
           <Autos
             autoCashoutValue={store.autoCashoutValue}

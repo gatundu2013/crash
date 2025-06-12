@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from "@/config/gameConfig.cofig";
+import { GAME_CONFIG } from "@/config/game.config";
 import { create } from "zustand";
 
 export interface BetStoreI {

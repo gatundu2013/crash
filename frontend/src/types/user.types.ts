@@ -3,4 +3,5 @@ export interface UserI {
   phoneNumber: string;
   accountBalance: number;
   avatar: string;
+  userId: string;
 }
