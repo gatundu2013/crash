@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GAME_CONFIG } from "@/config/game.cofig";
+import { GAME_CONFIG } from "@/config/game.config";
 import { cn } from "@/lib/utils";
 import type { BetStoreI } from "@/stores/betStore";
 import { useEffect, useState, type ChangeEvent } from "react";

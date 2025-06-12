@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { GAME_CONFIG } from "@/config/game.cofig";
+import { GAME_CONFIG } from "@/config/game.config";
 import type { BetStoreI } from "@/stores/betStore";
 
 interface QuickStakeProps extends Pick<BetStoreI, "setStake"> {}
