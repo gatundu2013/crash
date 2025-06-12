@@ -23,11 +23,7 @@ const BetController = ({ useStore }: BetControllerProps) => {
           <QuickStakes setStake={store.setStake} />
         </div>
 
-        <BetButton
-          stake={store.stake}
-          autoCashoutValue={store.autoCashoutValue}
-          hasAutoCashout={store.hasAutoCashout}
-        />
+        <BetButton {...store} />
       </div>
 
       <div className="border-t border-white/10 mt-2.5 py-2">
