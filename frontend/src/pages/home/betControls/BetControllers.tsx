@@ -10,31 +10,38 @@ interface BetControllerProps {
 }
 
 const BetController = ({ useStore }: BetControllerProps) => {
-  const store = useStore();
+  const betStore = useStore();
 
-  // Shared container styles
-  const containerClass = "max-w-[350px] mx-auto px-2";
+  const containerClasses = "max-w-[350px] mx-auto px-2";
 
   return (
     <div className="bg-layer-4 w-full flex-1 pt-3 rounded-xl">
-      <div className={`${containerClass} space-y-2`}>
+      <div className={`${containerClasses} space-y-2`}>
         <div className="space-y-1">
-          <StakeInput stake={store.stake} setStake={store.setStake} />
-          <QuickStakes setStake={store.setStake} />
+          <StakeInput
+            stake={betStore.stake}
+            setStake={betStore.setStake}
+            areBetControlsDisabled={betStore.areBetControlsDisabled}
+          />
+          <QuickStakes
+            setStake={betStore.setStake}
+            areBetControlsDisabled={betStore.areBetControlsDisabled}
+          />
         </div>
 
-        <BetButton {...store} />
+        <BetButton {...betStore} />
       </div>
 
       <div className="border-t border-white/10 mt-2.5 py-2">
-        <div className={containerClass}>
+        <div className={containerClasses}>
           <Autos
-            autoCashoutValue={store.autoCashoutValue}
-            hasAutoBet={store.hasAutoBet}
-            hasAutoCashout={store.hasAutoCashout}
-            setAutoCashoutValue={store.setAutoCashoutValue}
-            setAutoBet={store.setAutoBet}
-            setAutoCashout={store.setAutoCashout}
+            autoCashoutValue={betStore.autoCashoutValue}
+            hasAutoBet={betStore.hasAutoBet}
+            hasAutoCashout={betStore.hasAutoCashout}
+            setAutoCashoutValue={betStore.setAutoCashoutValue}
+            setAutoBet={betStore.setAutoBet}
+            setAutoCashout={betStore.setAutoCashout}
+            areBetControlsDisabled={betStore.areBetControlsDisabled}
           />
         </div>
       </div>

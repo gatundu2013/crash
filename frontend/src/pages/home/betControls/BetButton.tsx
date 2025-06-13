@@ -1,106 +1,70 @@
 import { Button } from "@/components/ui/button";
-import { SOCKET_EVENTS } from "@/config/socketEvents.config";
 import { cn } from "@/lib/utils";
-import useAuthStore from "@/stores/authStore";
 import type { BetStoreI } from "@/stores/betStore";
 import useGameStore from "@/stores/gameStore";
-import useSocketStore from "@/stores/socketStore";
-import type { BettingPayload, SuccessfulBetRes } from "@/types/bet.types";
 import { GamePhase } from "@/types/game.types";
 import { useEffect } from "react";
-import { toast } from "react-toastify";
 
 interface BetButtonProps extends BetStoreI {}
 
 const BetButton = ({
   stake,
-  hasAutoCashout,
   hasScheduledBet,
-  autoCashoutValue,
   hasPlacedBet,
+  hasAutoBet,
   performBetAction,
-  setIsRequesting,
-  onBetSuccess,
-  onBetFailure,
-  resetBetState,
+  handleGamePhaseChange,
+  areBetControlsDisabled,
+  subscribeToBetSocketEvents,
+  unsubscribeFromBetSocketEvents,
 }: BetButtonProps) => {
-  const socket = useSocketStore((state) => state.socket);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const userData = useAuthStore((state) => state.userData);
-  const updateUserData = useAuthStore((state) => state.updateUserData);
   const gamePhase = useGameStore((state) => state.gamePhase);
-
-  const handlePlaceBet = () => {
-    if (!isAuthenticated || !userData) {
-      toast.error("Login required");
-      return;
-    }
-
-    if (!socket) {
-      toast.error("Connection error. Please try again.");
-      return;
-    }
-
-    const bettingPayload: BettingPayload = {
-      stake,
-      autoCashoutMultiplier: hasAutoCashout ? autoCashoutValue : null,
-      userId: userData.userId,
-      clientSeed: "",
-      username: userData.username,
-    };
-
-    setIsRequesting(true);
-    socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET, bettingPayload);
-  };
+  const currentMultiplier = useGameStore((state) => state.currentMultiplier);
+  const { isPlaceBetButtonDisabled } = areBetControlsDisabled();
 
   useEffect(() => {
-    socket?.on(
-      SOCKET_EVENTS.LISTENERS.BETTING.PLACE_BET_ERROR,
-      ({ message }) => {
-        onBetFailure();
-        toast.error(message);
-      }
-    );
-
-    socket?.on(
-      SOCKET_EVENTS.LISTENERS.BETTING.PLACE_BET_SUCCESS,
-      (data: SuccessfulBetRes) => {
-        onBetSuccess(data.betId);
-        updateUserData({ accountBalance: data.accountBalance });
-      }
-    );
-
-    return () => {
-      socket?.off(SOCKET_EVENTS.LISTENERS.BETTING.PLACE_BET_ERROR);
-      socket?.off(SOCKET_EVENTS.LISTENERS.BETTING.CASHOUT_ERROR);
-    };
-  }, [socket]);
+    subscribeToBetSocketEvents();
+    return unsubscribeFromBetSocketEvents;
+  }, []);
 
   useEffect(() => {
-    if (gamePhase === GamePhase.END && hasPlacedBet) {
-      resetBetState();
-    }
-
-    if (gamePhase === GamePhase.BETTING && hasScheduledBet) {
-      handlePlaceBet();
-    }
-  }, [gamePhase]);
+    handleGamePhaseChange();
+  }, [gamePhase, hasAutoBet]);
 
   const handleBetUI = () => {
     if (hasScheduledBet) {
       return {
-        className: "bg-[#cb011a] text-white border-red-500",
-        content: <h4>Cancel</h4>,
+        className:
+          "bg-[#c9184a] text-white shadow-[0_0_12px_rgba(217,4,41,0.3),_inset_0_-2px_0_rgba(140,0,20,0.4)]",
+        content: (
+          <span className="flex flex-col items-center justify-center text-sm w-full h-full relative">
+            <span>Cancel</span>
+            <span className="text-white/85 text-xs">
+              Waiting for next round
+            </span>
+          </span>
+        ),
       };
     }
 
-    if (hasPlacedBet) {
+    if (gamePhase === GamePhase.BETTING && hasPlacedBet) {
       return {
-        className: "bg-[#d07206] text-white",
+        className:
+          "shadow-[0_0_12px_rgba(43,147,72,0.3),_inset_0_-2px_0_rgba(0,100,20,0.4)]",
+        content: <h4 className="text-sm">Bet Accepted</h4>,
+      };
+    }
+
+    if (gamePhase === GamePhase.RUNNING && hasPlacedBet) {
+      return {
+        className:
+          "bg-gradient-to-l from-[#FBD765] to-[#EF9E3F] text-black shadow-[0_0_12px_rgba(238,206,35,0.3),_inset_0_-2px_0_#CA7A1D]",
         content: (
-          <div className="flex gap-1 items-baseline">
-            <span className="b">Cashout {stake.toFixed(2)}</span>
-            <span className="text-sm">KSH</span>
+          <div className="flex gap-1 items-baseline text-[15px]">
+            <span className="text-sm font-medium">Cashout KES</span>
+            <span className="font-semibold">
+              {(stake * currentMultiplier).toFixed(2)}
+            </span>
           </div>
         ),
       };
@@ -120,16 +84,11 @@ const BetButton = ({
   return (
     <div className="w-full h-11.5 mt-0.5">
       <Button
-        onClick={() =>
-          performBetAction({
-            gamePhase,
-            placeBet: handlePlaceBet,
-            cashout: () => {},
-          })
-        }
         type="button"
+        onClick={performBetAction}
+        disabled={isPlaceBetButtonDisabled}
         className={cn(
-          "w-full h-full text-[18px] font-semibold",
+          "w-full h-full text-[16px] transition-all duration-300 font-semibold shadow-[0_0_12px_rgba(238,206,35,0.15),_inset_0_-2px_0_rgba(0,0,0,0.1)]",
           handleBetUI().className
         )}
       >

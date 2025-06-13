@@ -2,9 +2,12 @@ import { Button } from "@/components/ui/button";
 import { GAME_CONFIG } from "@/config/game.config";
 import type { BetStoreI } from "@/stores/betStore";
 
-interface QuickStakeProps extends Pick<BetStoreI, "setStake"> {}
+interface QuickStakeProps
+  extends Pick<BetStoreI, "setStake" | "areBetControlsDisabled"> {}
 
-const QuickStakes = ({ setStake }: QuickStakeProps) => {
+const QuickStakes = ({ setStake, areBetControlsDisabled }: QuickStakeProps) => {
+  const { areOtherBetControlsDisabled } = areBetControlsDisabled();
+
   const predefinedStakes = [
     GAME_CONFIG.MIN_STAKE,
     50,
@@ -20,6 +23,7 @@ const QuickStakes = ({ setStake }: QuickStakeProps) => {
     <div className="flex gap-1.5">
       {predefinedStakes.map((stakeAmount, index) => (
         <Button
+          disabled={areOtherBetControlsDisabled}
           onClick={() => handleStakeSelection(stakeAmount)}
           key={index}
           className="h-6 w-full font-normal flex-1 px-3 bg-layer-2 text-white/80 rounded-full transition-colors"

@@ -5,9 +5,11 @@ import BetGrid from "./betControls/Index";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsTrigger } from "@/components/ui/tabs";
 import { TabsContent, TabsList } from "@radix-ui/react-tabs";
+import useGameStore from "@/stores/gameStore";
 
 const Home = () => {
   const chatsAreShown = useChatStore((state) => state.chatsAreShown);
+  const gamePhase = useGameStore((state) => state.gamePhase);
 
   return (
     <div
@@ -77,6 +79,7 @@ const Home = () => {
                   <h4 className="text-green-1">12.23x</h4>
                   <h4 className="text-green-1">200000</h4>
                 </div>
+                <div>{gamePhase}</div>
               </div>
             </div>
           </TabsContent>

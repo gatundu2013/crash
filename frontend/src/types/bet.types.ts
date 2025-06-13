@@ -4,6 +4,7 @@ export interface BettingPayload {
   userId: string;
   clientSeed: string;
   username: string;
+  storeId: string; // used to identify events
 }
 
 export interface SuccessfulBetRes {

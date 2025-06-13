@@ -14,6 +14,7 @@ interface AutosProps
     | "setAutoCashoutValue"
     | "setAutoBet"
     | "setAutoCashout"
+    | "areBetControlsDisabled"
   > {}
 
 const Autos = ({
@@ -23,8 +24,10 @@ const Autos = ({
   setAutoCashoutValue,
   setAutoBet,
   setAutoCashout,
+  areBetControlsDisabled,
 }: AutosProps) => {
   const [displayValue, setDisplayValue] = useState(autoCashoutValue.toFixed(2));
+  const { areOtherBetControlsDisabled } = areBetControlsDisabled();
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -62,16 +65,18 @@ const Autos = ({
         <div className="flex items-center gap-1">
           <h4 className="text-sm">Auto Cashout</h4>
           <Switch
+            disabled={areOtherBetControlsDisabled}
             checked={hasAutoCashout}
             onCheckedChange={toggleAutoCashout}
           />
         </div>
         <div className="flex items-center bg-layer-1 w-16 h-7 rounded-full">
           <Input
+            disabled={areOtherBetControlsDisabled || !hasAutoCashout}
             onBlur={handleInputBlur}
             onChange={handleInputChange}
             value={displayValue}
-            className="w-full rounded-full px-1.5 font-medium h-full text-center border-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none text-white text-xs"
+            className="w-full bg-inherit rounded-full px-1.5 font-medium h-full text-center border-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none text-white text-xs"
           />
 
           <RxCross1 size={12} className="mr-1" />

@@ -19,10 +19,12 @@ export const SOCKET_EVENTS = {
     },
 
     BETTING: {
-      PLACE_BET_SUCCESS: "betting:placebetSuccess",
-      PLACE_BET_ERROR: "betting:placebetError",
-      BET_ID: "betting:betId",
+      PLACE_BET_SUCCESS: (storeId: string) =>
+        `betting:placebetSuccess:${storeId}`.trim(),
+      PLACE_BET_ERROR: (storeId: string) =>
+        `betting:placebetError:${storeId}`.trim(),
 
+      BET_ID: "betting:betId",
       CASHOUT_ERROR: "cashout:cashoutError",
       CASHOUT_SUCCESS: "cashout:cashoutSuccess",
     },
