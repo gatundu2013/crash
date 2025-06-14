@@ -3,6 +3,7 @@ import {
   AcceptedBet,
   BetStatus,
   BettingPayload,
+  FailedBetInfo,
   GroupedUserBets,
   StagedBet,
   userAccountBalance,
@@ -13,8 +14,8 @@ import User from "../../models/user.model";
 import mongoose, { AnyBulkWriteOperation } from "mongoose";
 import BetHistory from "../../models/betHistory.model";
 import { AccountStatus } from "../../types/user.types";
-import { EVENT_NAMES, eventBus } from "../eventBus";
 import { GameError } from "../../utils/errors/gameError";
+import { EVENT_NAMES, eventBus } from "../eventBus";
 
 /**
  * BettingManager handles high-volume bet processing using a staged approach with batch processing.
@@ -30,9 +31,9 @@ class BettingManager {
   private static instance: BettingManager;
 
   private readonly config = {
-    MAX_BETS_PER_USER: 4,
-    MAX_BATCH_SIZE: 2,
-    BATCH_PROCESSING_INTERVAL: 1000, // 1 second
+    MAX_BETS_PER_USER: 2,
+    MAX_BATCH_SIZE: 500,
+    DEBOUNCE_TIME_MS: 200, // Time to wait before processing a batch
   };
 
   /**
@@ -53,8 +54,9 @@ class BettingManager {
   /** Controls whether new bets can be accepted - closed during game rounds */
   private isBettingWindowOpen: boolean = false;
 
-  /** Interval ID for batch processing fallback mechanism */
-  private batchProcessingInterval: NodeJS.Timeout | null = null;
+  private debounceTimerId: NodeJS.Timeout | null = null;
+
+  private currentRoundId: string | null = null;
 
   private constructor() {}
 
@@ -69,28 +71,37 @@ class BettingManager {
    * Stages a bet for batch processing after performing initial validation.
    * This is the main entry point for new betting requests.
    */
-  public stageBet(params: BettingPayload, socket: Socket): void {
+  public async stageBet(params: BettingPayload, socket: Socket) {
     // Validation 1: Check if betting is currently allowed
     if (!this.isBettingWindowOpen) {
-      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
-        message: "Betting window is closed",
-      });
+      console.warn("[BettingManager-StageBet]:Betting window is closed");
+      socket.emit(
+        SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR(params.storeId),
+        {
+          message: "Betting window is closed",
+        }
+      );
       return;
     }
 
     // Validation 2: Check if user has reached maximum concurrent bets
     if (this.userHasMaxBets(params.userId)) {
-      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
-        message: "Max bet reached",
-        maxBet: this.config.MAX_BETS_PER_USER,
-      });
+      console.warn(
+        "[BettingManager-StageBet]:User has reached maximum concurrent bets"
+      );
+      socket.emit(
+        SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR(params.storeId),
+        {
+          message: `Max bet per user is ${this.config.MAX_BETS_PER_USER} bets`,
+        }
+      );
       return;
     }
 
     // Generate unique identifier for this bet
-    const betId: string = uuidv4();
+    const betId = uuidv4();
 
-    // Update user-to-bet mapping for tracking and validation
+    // Update user-to-bet mapping for bet tracking and validation
     const userBetIds = this.userIdsToBetIds.get(params.userId) || new Set();
     userBetIds.add(betId);
     this.userIdsToBetIds.set(params.userId, userBetIds);
@@ -103,8 +114,20 @@ class BettingManager {
     // Store bet in staging area
     this.stagedBetsMap.set(betId, betToStage);
 
-    // Trigger immediate batch processing to minimize latency
-    this.processBatch().catch(console.error);
+    // This logic starts the batch processing loop using a debounced trigger.
+    // It ensures that when the system is idle, the first bet doesn't get
+    // processed alone. Instead, it waits X(ms) to allow a "wave" of bets
+    // to accumulate, making the first batch more efficient.
+
+    // The condition ensures we only start this timer if:
+    // 1. The processing loop is not already running (`!this.isProcessing`).
+    // 2. A start-up timer is not already pending (`!this.debounceTimerId`).
+    if (!this.isProcessing && !this.debounceTimerId) {
+      this.debounceTimerId = setTimeout(() => {
+        this.processBatch().catch(console.error);
+        this.debounceTimerId = null;
+      }, this.config.DEBOUNCE_TIME_MS);
+    }
   }
 
   /**
@@ -119,22 +142,27 @@ class BettingManager {
    * 5. **Client Notification**: Send success/failure messages via WebSocket
    * 6. **Cleanup & Scheduling**: Reset flags and schedule next processing cycle
    *
-   * @returns Promise<Array> of successfully processed bet IDs
+   * @returns Promise<void>
    */
-  public async processBatch(): Promise<string[]> {
+  private async processBatch() {
     // Prevents concurrent processing
     if (this.isProcessing) {
-      return [];
+      console.warn(
+        "[BettingManager-ProcessBatch]: Another Batch is processing."
+      );
+      return;
     }
 
     // No bets to process
     if (this.stagedBetsMap.size === 0) {
-      return [];
+      console.warn("[BettingManager-ProcessBatch]: No bets to process.");
+      return;
     }
 
     // Betting window must be open for processing
     if (!this.isBettingWindowOpen) {
-      return [];
+      console.warn("[BettingManager-ProcessBatch]: Betting window is closed.");
+      return;
     }
 
     // Set processing flag to prevent concurrent batch execution
@@ -146,73 +174,80 @@ class BettingManager {
     session.startTransaction();
 
     try {
-      // Step 1: Extract and organize bets for processing
+      // Step 1: Extract a batch of bets and group them by user
       const { batch, groupedUserBets } = this.extractAndGroupBets();
 
       // Step 2: Fetch current account balances for all users in this batch
       const userAccountBalances = await User.find(
         {
-          _id: { $in: Array.from(groupedUserBets.keys()) },
+          userId: { $in: Array.from(groupedUserBets.keys()) },
           accountStatus: AccountStatus.ACTIVE,
         },
-        { accountBalance: 1, _id: 1 }
-      ).session(session);
+        { accountBalance: 1, userId: 1 },
+        { session }
+      );
 
-      // Handle edge case: No users found (possibly deleted accounts)
+      // No users found
       if (userAccountBalances.length === 0) {
+        console.warn("[BettingManager-ProcessBatch]: No users found.");
         await session.abortTransaction();
         session.endSession();
         this.isProcessing = false;
-        return [];
+        return;
       }
 
-      // Step 3: Validate bets against account balances and prepare database operations
-      const { acceptedBets, failedBets, acceptedBetsOperations } =
+      // Step 3: Validate bets against balances and prepare database operations
+      const { validatedBets, failedBets, balanceUpdateOps } =
         this.validateBetsAndPrepareOperations(
           groupedUserBets,
           userAccountBalances
         );
 
       // Handle case where all bets fail due to insufficient funds
-      if (acceptedBetsOperations.length === 0) {
-        this.notifyFailedBets(failedBets, "Insufficient balance");
+      if (balanceUpdateOps.length === 0) {
+        console.warn(
+          "[BettingManager-ProcessBatch]: All user in batch had invalid account or not enough balance"
+        );
         await session.abortTransaction();
         session.endSession();
+        this.notifyFailedBets(failedBets);
         this.isProcessing = false;
-        return [];
+        return;
       }
 
-      // Step 4: Execute all database operations atomically
+      // Step 4: Execute all database writes if there are any successful bets
       await this.executeDatabaseOperations(
-        acceptedBetsOperations,
-        acceptedBets,
+        balanceUpdateOps,
+        validatedBets,
         session
       );
 
-      // Commit transaction - all operations succeed or fail together
+      // Step 5: Commit the transaction
       await session.commitTransaction();
-      session.endSession();
 
-      // Step 5: Notify clients of results (outside transaction for performance)
-      this.notifyBetResults(acceptedBets, failedBets);
+      // Step 6: Notify clients of the results (outside the transaction)
+      this.notifyBetResults(validatedBets, failedBets);
 
-      // Step 6: Log performance metrics for monitoring
+      // Step 7: Log batch timing and statistics
       this.logBatchTiming(
         batchStart,
         batch.length,
-        acceptedBets.length,
+        validatedBets.length,
         failedBets.length
       );
 
-      eventBus.emit(EVENT_NAMES.BETS_ACCEPTED, acceptedBets);
-
-      return acceptedBets.map(({ payload }) => payload.betId);
+      // Step 8: Announce the accepted bets to other services.
+      // This is a critical step for decoupling. The RoundStateManager listens for
+      // this event to update its own state with the new bets, enabling features
+      // like auto-cashouts and live bet tracking without being tightly coupled
+      // to the BettingManager.
+      eventBus.emit(EVENT_NAMES.ACCEPTED_BETS, validatedBets);
     } catch (error) {
-      // Handle any processing errors by rolling back transaction
+      // Rollback transaction on error
       console.error("[processBatch] Error processing batch:", error);
       await session.abortTransaction();
       session.endSession();
-      return [];
+      return;
     } finally {
       // Always reset processing flag and schedule next processing cycle
       this.isProcessing = false;
@@ -244,20 +279,20 @@ class BettingManager {
     );
 
     // Remove processed bets from staging to prevent reprocessing
-    batch.forEach(({ payload }: StagedBet): void => {
+    batch.forEach(({ payload }) => {
       this.stagedBetsMap.delete(payload.betId);
     });
 
     // Group bets by user for efficient balance validation
-    const groupedUserBets: Map<string, GroupedUserBets> = new Map();
+    const groupedUserBets: Map<string, GroupedUserBets> = new Map(); //userId to betDetails
 
     batch.forEach((stagedBet: StagedBet): void => {
-      const existingGroup = groupedUserBets.get(stagedBet.payload.userId);
+      const userGroup = groupedUserBets.get(stagedBet.payload.userId);
 
-      if (existingGroup) {
+      if (userGroup) {
         // Add to existing user group
-        existingGroup.bets.push(stagedBet);
-        existingGroup.totalStake += stagedBet.payload.stake;
+        userGroup.bets.push(stagedBet);
+        userGroup.totalStake += stagedBet.payload.stake;
       } else {
         // Create new user group
         groupedUserBets.set(stagedBet.payload.userId, {
@@ -284,44 +319,76 @@ class BettingManager {
     groupedUserBets: Map<string, GroupedUserBets>,
     userAccountBalances: userAccountBalance[]
   ) {
-    const acceptedBetsOperations: AnyBulkWriteOperation[] = [];
-    const acceptedBets: AcceptedBet[] = [];
-    const failedBets: StagedBet[] = [];
+    const balanceUpdateOps: AnyBulkWriteOperation[] = [];
+    const validatedBets: AcceptedBet[] = [];
+    const failedBets: FailedBetInfo[] = [];
 
-    // Process each user's balance against their total bet stakes
-    userAccountBalances.forEach((user): void => {
-      const userId: string = user._id.toString();
-      const betDetails = groupedUserBets.get(userId);
-
-      if (betDetails && user.accountBalance >= betDetails.totalStake) {
-        // User has sufficient balance - prepare atomic balance update
-        acceptedBetsOperations.push({
-          updateOne: {
-            filter: { _id: user._id },
-            update: { $inc: { accountBalance: -betDetails.totalStake } },
-          },
-        });
-
-        // Calculate new account balance after deduction
-        const newAccountBalance = user.accountBalance - betDetails.totalStake;
-
-        // Create enhanced staged bets with new account balance
-        const successfulBet = betDetails.bets.map((bet) => {
-          return {
-            ...bet,
-            newAccountBalance,
-          };
-        });
-
-        // Mark all bets for this user as successful
-        acceptedBets.push(...successfulBet);
-      } else if (betDetails) {
-        // Insufficient balance - mark all bets for this user as failed
-        failedBets.push(...betDetails.bets);
-      }
+    // Step 1: Create a Map for efficient O(1) balance lookups
+    const userAccountBalancesMap = new Map<string, number>();
+    userAccountBalances.forEach((account) => {
+      userAccountBalancesMap.set(account.userId, account.accountBalance);
     });
 
-    return { acceptedBets, failedBets, acceptedBetsOperations };
+    // Step 2: Iterate over each user's grouped bets
+    groupedUserBets.forEach((user) => {
+      const userId = user.bets[0].payload.userId;
+      const userAccountBalance = userAccountBalancesMap.get(userId);
+
+      // User not found or account is inactive.
+      if (userAccountBalance == undefined) {
+        console.warn("[BettingManager] User not found or account is inactive.");
+        user.bets.forEach((bet) => {
+          failedBets.push({
+            socket: bet.socket,
+            storeId: bet.payload.storeId,
+            reason: "User not found or account is inactive.",
+          });
+        });
+        return;
+      }
+
+      // Insufficient balance.
+      // User exists but their balance is less than their total stake. Fail all their bets.
+      if (userAccountBalance < user.totalStake) {
+        console.warn(
+          "[BettingManager] User exists but their balance is less than their total stake."
+        );
+        user.bets.forEach((bet) => {
+          failedBets.push({
+            socket: bet.socket,
+            storeId: bet.payload.storeId,
+            reason: "Insufficient balance.",
+          });
+        });
+        return;
+      }
+
+      // All validations passed. Process the bet.
+
+      //....User Balance deduction op
+      balanceUpdateOps.push({
+        updateOne: {
+          filter: { userId },
+          update: { $inc: { accountBalance: -user.totalStake } },
+        },
+      });
+
+      // Calculate the new balance to send back to the client for immediate UI update.
+      const newAccountBalance = userAccountBalance - user.totalStake;
+
+      // Create the detailed accepted bet records, including the new balance.
+      const validatedBetsForCurrentUser = user.bets.map((bet) => {
+        return {
+          ...bet,
+          newAccountBalance,
+        };
+      });
+
+      // Add the successfully processed bets to the results array.
+      validatedBets.push(...validatedBetsForCurrentUser);
+    });
+
+    return { validatedBets, failedBets, balanceUpdateOps };
   }
 
   /**
@@ -333,24 +400,33 @@ class BettingManager {
    * 2. **Bet History Creation**: Insert bet records with initial PENDING status
    */
   private async executeDatabaseOperations(
-    acceptedBetsOperations: AnyBulkWriteOperation[],
-    acceptedBets: AcceptedBet[],
+    balanceUpdateOps: AnyBulkWriteOperation[],
+    validatedBets: AcceptedBet[],
     session: mongoose.ClientSession
-  ): Promise<void> {
-    // Step 1: Apply all balance updates atomically
-    await User.bulkWrite(acceptedBetsOperations, { session });
+  ) {
+    // This is a critical. If currentRoundId is null, it means we are
+    // trying to process bets outside of an active betting window, which should
+    // never happen and indicates a severe logic flaw.
+    if (!this.currentRoundId) {
+      throw new Error(
+        "[BettingManager] Fatal Error: Attempted to execute database operations without a valid roundId."
+      );
+    }
+
+    // Step 1: Apply all balance updates
+    await User.bulkWrite(balanceUpdateOps, { session });
 
     // Step 2: Create bet history records for all successful bets
-    const betHistories = acceptedBets.map(({ payload }) => ({
+    const betHistories = validatedBets.map(({ payload }) => ({
       betId: payload.betId,
       userId: payload.userId,
       stake: payload.stake,
-      payout: null, // Will be set when bet is resolved
-      cashoutMultiplier: null, // Will be set if user cashes out early
-      finalMultiplier: null, // Will be set when round ends
+      payout: null,
+      cashoutMultiplier: null,
+      finalMultiplier: null,
       autoCashoutMultiplier: payload.autoCashoutMultiplier,
-      status: BetStatus.PENDING, // Initial status for new bets
-      roundId: "dddd", // TODO: Use actual round ID from game context
+      status: BetStatus.PENDING,
+      roundId: this.currentRoundId, // Use the stored roundId
     }));
 
     await BetHistory.insertMany(betHistories, { session });
@@ -366,33 +442,43 @@ class BettingManager {
    * - **Failure**: Bet rejected due to insufficient balance or other issues
    */
   private notifyBetResults(
-    acceptedBets: AcceptedBet[],
-    failedBets: StagedBet[]
+    validatedBets: AcceptedBet[],
+    failedBets: FailedBetInfo[]
   ): void {
     // Notify clients of successful bet placements with optimized data
-    acceptedBets.forEach(({ socket, payload, newAccountBalance }) => {
-      if (socket) {
-        socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_SUCCESS, {
-          message: "Bet placed successfully",
-          betId: payload.betId,
-          accountBalance: newAccountBalance,
-        });
+    validatedBets.forEach((bet) => {
+      const successRes = {
+        betId: bet.payload.betId,
+        accountBalance: bet.newAccountBalance,
+      };
+
+      if (bet.socket) {
+        bet.socket.emit(
+          SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_SUCCESS(bet.payload.storeId),
+          successRes
+        );
       }
     });
 
-    this.notifyFailedBets(failedBets, "Insufficient Balance");
+    this.notifyFailedBets(failedBets);
   }
 
   /**
-   * Sends failure notifications to clients for rejected bets.
+   * Notifies clients about failed bets with a specific reason for each failure.
+   *
+   * @param failedBets - An array of objects representing failed bets.
    */
-  private notifyFailedBets(failedBets: StagedBet[], reason: string): void {
-    failedBets.forEach(({ socket, payload }: StagedBet): void => {
+  private notifyFailedBets(failedBets: FailedBetInfo[]): void {
+    failedBets.forEach(({ socket, storeId, reason }) => {
+      const errorRes = {
+        message: reason,
+      };
+
       if (socket) {
-        socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
-          message: reason,
-          betId: payload.betId,
-        });
+        socket.emit(
+          SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR(storeId),
+          errorRes
+        );
       }
     });
   }
@@ -413,103 +499,13 @@ class BettingManager {
     successful: number,
     failed: number
   ): void {
-    const durationMs = Date.now() - batchStart;
+    const batchEnd = Date.now();
+    const durationMs = batchEnd - batchStart;
     const durationSeconds = (durationMs / 1000).toFixed(2);
 
-    console.log(
+    console.info(
       `[Batch] Processed ${totalBets} bets in ${durationMs}ms (${durationSeconds}s) | Success: ${successful}, Failed: ${failed}`
     );
-  }
-
-  /**
-   * Opens the betting window to allow new bet submissions.
-   * When the betting window is open, users can submit new bets through the stageBet method.
-   * This is  called at the start of a new game round.
-   */
-  public openBettingWindow(): void {
-    this.isBettingWindowOpen = true;
-
-    // Clear any interval that may be there
-    if (this.batchProcessingInterval) {
-      clearInterval(this.batchProcessingInterval);
-      this.batchProcessingInterval = null;
-    }
-
-    // Fallback mechanism: Process batches every second to ensure no bets are stuck
-    // This acts as a safety net if the primary setImmediate triggers fail
-    this.batchProcessingInterval = setInterval(
-      () => this.processBatch().catch(console.error),
-      this.config.BATCH_PROCESSING_INTERVAL
-    );
-  }
-
-  /**
-   * Closes the betting window to prevent new bet submissions.
-   * When the betting window is closed, new bet requests will be immediately rejected.
-   * This is called when a game round begins and no more bets should be accepted.
-   *
-   * ## Note:
-   * Bets that are already staged will still be processed if batch processing is in progress.
-   */
-  public closeBettingWindow(): void {
-    this.isBettingWindowOpen = false;
-
-    // Stop the interval if it's running
-    if (this.batchProcessingInterval) {
-      clearInterval(this.batchProcessingInterval);
-      this.batchProcessingInterval = null;
-    }
-
-    // Extract timed out bets
-    const timedoutBets = Array.from(this.stagedBetsMap.values());
-
-    // Clear the maps
-    this.stagedBetsMap.clear();
-    this.userIdsToBetIds.clear();
-
-    // Notify clients of timed out bets
-    timedoutBets.forEach((timeoutBet) => {
-      if (timeoutBet.socket) {
-        timeoutBet.socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR, {
-          message: "Stage timeout",
-        });
-      }
-    });
-  }
-
-  /**
-   * Gracefully shuts down the BettingManager by clearing intervals and processing remaining bets
-   */
-  public async shutdown(): Promise<void> {
-    // Clear the batch processing interval
-    if (this.batchProcessingInterval) {
-      clearInterval(this.batchProcessingInterval);
-      this.batchProcessingInterval = null;
-    }
-
-    // Process any remaining staged bets
-    if (this.stagedBetsMap.size > 0) {
-      await this.processBatch();
-    }
-  }
-
-  /**
-   * Get current statistics about the betting manager state
-   */
-  public getStats(): {
-    stagedBetsCount: number;
-    activeUsersCount: number;
-    isBettingWindowOpen: boolean;
-    isProcessing: boolean;
-    config: any;
-  } {
-    return {
-      stagedBetsCount: this.stagedBetsMap.size,
-      activeUsersCount: this.userIdsToBetIds.size,
-      isBettingWindowOpen: this.isBettingWindowOpen,
-      isProcessing: this.isProcessing,
-      config: this.config,
-    };
   }
 
   /**
@@ -530,17 +526,70 @@ class BettingManager {
   }
 
   /**
+   * Opens the betting window to allow new bet submissions.
+   * When the betting window is open, users can submit new bets through the stageBet method.
+   * This is alled at the start of a new game round.
+   * Picks roundId.This roundId is used to save betHistories
+   */
+  public openBettingWindow(roundId: string) {
+    this.isBettingWindowOpen = true;
+    this.currentRoundId = roundId;
+  }
+
+  /**
+   * Closes the betting window to prevent new bet submissions.
+   * When the betting window is closed, new bet requests will be immediately rejected.
+   * This is called when a game round begins and no more bets should be accepted.
+   *
+   * ## Note:
+   * Any bets still in the staging queue are immediately cleared and rejected. This
+   * does not affect any batch that was already in the middle of its database
+   * transaction when the window closed.
+   */
+  public closeBettingWindow() {
+    this.isBettingWindowOpen = false;
+    this.currentRoundId = null; // Clear roundId
+
+    // Any bets remaining in the staging queue are now considered rejected.
+    const rejectedStagedBets = Array.from(this.stagedBetsMap.values());
+
+    // Clear the maps to prevent any further processing of these bets.
+    this.stagedBetsMap.clear();
+    this.userIdsToBetIds.clear();
+
+    // Notify clients that their staged bets were rejected because the window closed.
+    rejectedStagedBets.forEach((rejectedBet) => {
+      if (rejectedBet.socket) {
+        rejectedBet.socket.emit(
+          SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR(
+            rejectedBet.payload.storeId
+          ),
+          {
+            message: "Too late. Betting window was closed",
+          }
+        );
+      }
+    });
+  }
+
+  /**
+   * Get current statistics about the betting manager state
+   */
+  public getStats() {
+    return {
+      stagedBetsCount: this.stagedBetsMap.size,
+      activeUsersCount: this.userIdsToBetIds.size,
+      isBettingWindowOpen: this.isBettingWindowOpen,
+      isProcessing: this.isProcessing,
+      config: this.config,
+    };
+  }
+
+  /**
    * Updates all uncashed (non-winning) bets for a given game round by marking them as LOST.
    *
    * This function finds all bets in the `BetHistory` collection that belong to the specified
    * round and have a status other than WON. It then sets their status to LOST.
-   *
-   * If the update operation fails or is not acknowledged by the database, a GameError is thrown.
-   *
-   * @param roundId - The unique identifier of the game round whose uncashed bets should be busted.
-   * @returns A promise that resolves to the result of the update operation,
-   *          including the number of modified documents.
-   * @throws GameError - If the database operation fails or is not acknowledged.
    */
   public async bustUncashedBets(roundId: string) {
     try {
@@ -565,12 +614,7 @@ class BettingManager {
       return results;
     } catch (err) {
       console.error("Failed to bust uncashed bets:", err);
-      throw new GameError({
-        description: "An error occured on our side. We are working on it",
-        internalMessage: "Failed to bust uncashed bets",
-        httpCode: 500,
-        isOperational: false,
-      });
+      throw err;
     }
   }
 
