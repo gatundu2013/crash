@@ -10,6 +10,9 @@ import useGameStore from "@/stores/gameStore";
 const Home = () => {
   const chatsAreShown = useChatStore((state) => state.chatsAreShown);
   const gamePhase = useGameStore((state) => state.gamePhase);
+  const totalBets = useGameStore((state) => state.totalBets);
+  const totalBetAmount = useGameStore((state) => state.totalBetAmount);
+  const topStakers = useGameStore((state) => state.topStakers);
 
   return (
     <div
@@ -47,11 +50,11 @@ const Home = () => {
                   </div>
 
                   <h4 className="flex gap-1">
-                    <span>456/2000</span>
+                    <span>456/{totalBets}</span>
                     <span>Players</span>
                   </h4>
                 </div>
-                <h4>Ksh 800000.00</h4>
+                <h4>Ksh {totalBetAmount.toFixed(2)}</h4>
               </div>
 
               <div className="grid grid-cols-4 text-md text-white/60 font-medium text-[14px]">
@@ -67,18 +70,18 @@ const Home = () => {
 
             <div className="mt-2 flex-1 overflow-y-scroll mb-3 gap-1">
               <div className="flex flex-col space-y-4.5 pt-1">
-                <div className="grid grid-cols-4 text-md text-[15px] font-medium">
-                  <h4 className="whitespace-break">Jamess</h4>
-                  <h4 className="">10000.00</h4>
-                  <h4 className="">-</h4>
-                  <h4 className="">-</h4>
-                </div>
-                <div className="grid grid-cols-4 text-[15px] font-medium">
-                  <h4 className="">Timothy</h4>
-                  <h4 className="">10000.00</h4>
-                  <h4 className="text-green-1">12.23x</h4>
-                  <h4 className="text-green-1">200000</h4>
-                </div>
+                {topStakers.map((topStakers) => {
+                  return (
+                    <div className="grid grid-cols-4 text-md text-[15px] font-medium">
+                      <h4 className="whitespace-break">
+                        {topStakers.username}
+                      </h4>
+                      <h4 className="">{topStakers.stake.toFixed(2)}</h4>
+                      <h4 className="">-</h4>
+                      <h4 className="">-</h4>
+                    </div>
+                  );
+                })}
                 <div>{gamePhase}</div>
               </div>
             </div>

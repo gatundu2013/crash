@@ -5,55 +5,16 @@ import useGameStore from "./gameStore";
 import useAuthStore from "./authStore";
 import useSocketStore from "./socketStore";
 import { toast } from "react-toastify";
-import type { BettingPayload, SuccessfulBetRes } from "@/types/bet.types";
+import type {
+  BetStoreI,
+  BettingPayload,
+  CashoutPayload,
+  SuccessfulBetRes,
+  SuccessfulCashoutRes,
+} from "@/types/bet.types";
 import { SOCKET_EVENTS } from "@/config/socketEvents.config";
 
-export interface BetStoreI {
-  stake: number; // Current bet amount
-  hasAutoBet: boolean; // Whether auto-bet is enabled
-  hasAutoCashout: boolean; // Whether auto-cashout is enabled
-  autoCashoutValue: number; // Auto-cashout multiplier value
-  isRequesting: boolean; // Flag indicating a request is in progress
-  hasScheduledBet: boolean; // If a bet is scheduled for the next round
-  hasPlacedBet: boolean; // If a bet was placed in current round
-  betId: string | null; // Current bet ID if placed
-
-  setStake: (stake: number) => void;
-  setAutoBet: (hasAutoBet: boolean) => void;
-  setAutoCashout: (hasAutoCashout: boolean) => void;
-  setAutoCashoutValue: (autoCashoutValue: number) => void;
-  setIsRequesting: (isRequesting: boolean) => void;
-  setHasScheduledBet: (hasScheduledBet: boolean) => void;
-  setHasPlacedBet: (hasPlacedBet: boolean) => void;
-
-  getValidBetAction: () => {
-    canPlaceBet: boolean;
-    canScheduleBet: boolean;
-    canCashout: boolean;
-  };
-
-  areBetControlsDisabled: () => {
-    isPlaceBetButtonDisabled: boolean;
-    areOtherBetControlsDisabled: boolean;
-  };
-
-  // Called by UI to perform action (place, schedule, or cashout)
-  performBetAction: () => void;
-
-  // Called on game phase change to trigger automatic actions
-  handleGamePhaseChange: () => void;
-
-  handleBetSuccess: (data: SuccessfulBetRes) => void;
-  handleBetFailure: (data?: { message: string }) => void;
-  onCashoutSucess: () => void;
-  resetBetState: () => void;
-
-  // Lifecycle socket subscriptions
-  subscribeToBetSocketEvents: () => void;
-  unsubscribeFromBetSocketEvents: () => void;
-}
-
-const intialBetState = {
+const initialState = {
   stake: GAME_CONFIG.MIN_STAKE,
   hasAutoBet: false,
   hasAutoCashout: false,
@@ -64,142 +25,168 @@ const intialBetState = {
   betId: null,
 };
 
-// Factory to create isolated bet stores
 const createBetStore = (storeId: string) => {
   return create<BetStoreI>((set, get) => ({
-    ...intialBetState,
+    ...initialState,
 
+    // Setters
     setStake: (stake) => set({ stake }),
     setAutoBet: (hasAutoBet) => set({ hasAutoBet }),
     setAutoCashout: (hasAutoCashout) => set({ hasAutoCashout }),
     setAutoCashoutValue: (autoCashoutValue) => set({ autoCashoutValue }),
-    setIsRequesting: (isRequesting) => set({ isRequesting }),
-    setHasScheduledBet: (hasScheduledBet) => set({ hasScheduledBet }),
-    setHasPlacedBet: (hasPlacedBet) => set({ hasPlacedBet }),
 
-    // Computes which bet-related actions are currently allowed
-    getValidBetAction() {
+    // Computed properties
+    canPlaceBet: () => {
       const gamePhase = useGameStore.getState().gamePhase;
       const { isRequesting, hasPlacedBet } = get();
-
-      if (isRequesting) {
-        return {
-          canPlaceBet: false,
-          canScheduleBet: false,
-          canCashout: false,
-        };
-      }
-
-      const canPlaceBet = gamePhase === GamePhase.BETTING && !hasPlacedBet;
-      const canCashout = gamePhase === GamePhase.RUNNING && hasPlacedBet;
-      const canScheduleBet =
-        (gamePhase === GamePhase.RUNNING && !hasPlacedBet) ||
-        gamePhase === GamePhase.END;
-
-      return { canPlaceBet, canScheduleBet, canCashout };
+      return gamePhase === GamePhase.BETTING && !hasPlacedBet && !isRequesting;
     },
 
-    // Computes if controls should be disabled based on bet status
-    areBetControlsDisabled() {
-      const { isRequesting, hasPlacedBet, hasScheduledBet } = get();
+    canCashout: () => {
       const gamePhase = useGameStore.getState().gamePhase;
-
-      const isPlaceBetButtonDisabled =
-        isRequesting || (hasPlacedBet && gamePhase === GamePhase.BETTING);
-
-      const areOtherBetControlsDisabled =
-        isPlaceBetButtonDisabled || hasScheduledBet || hasPlacedBet;
-
-      return {
-        isPlaceBetButtonDisabled,
-        areOtherBetControlsDisabled,
-      };
+      const { isRequesting, hasPlacedBet } = get();
+      return gamePhase === GamePhase.RUNNING && hasPlacedBet && !isRequesting;
     },
 
-    // UI action handler (place bet, cashout, or schedule)
-    performBetAction() {
-      const {
-        stake,
-        hasAutoCashout,
-        autoCashoutValue,
-        getValidBetAction,
-        handleBetFailure,
-      } = get();
+    canScheduleBet: () => {
+      const gamePhase = useGameStore.getState().gamePhase;
+      const { isRequesting, hasPlacedBet } = get();
+      return (
+        !isRequesting &&
+        !hasPlacedBet &&
+        (gamePhase === GamePhase.RUNNING || gamePhase === GamePhase.END)
+      );
+    },
+
+    isPlaceButtonDisabled: () => {
+      const { isRequesting, hasPlacedBet } = get();
+      const gamePhase = useGameStore.getState().gamePhase;
+      return isRequesting || (hasPlacedBet && gamePhase === GamePhase.BETTING);
+    },
+
+    areBetControlsDisabled: () => {
+      const { hasPlacedBet, hasScheduledBet } = get();
+      return get().isPlaceButtonDisabled() || hasScheduledBet || hasPlacedBet;
+    },
+
+    // Actions
+    placeBet: () => {
+      const { stake, hasAutoCashout, autoCashoutValue } = get();
       const { isAuthenticated, userData } = useAuthStore.getState();
       const socket = useSocketStore.getState().socket;
-      const betActions = getValidBetAction();
 
-      switch (true) {
-        case betActions.canPlaceBet:
-          if (!isAuthenticated || !userData) {
-            handleBetFailure({ message: "Login required" });
-            return;
-          }
+      if (!isAuthenticated || !userData) {
+        toast.error("Login required");
+        return;
+      }
 
-          if (!socket) {
-            handleBetFailure({
-              message: "Connection error. Please try again.",
-            });
-            return;
-          }
+      if (!socket) {
+        toast.error("Connection error. Please try again.");
+        return;
+      }
 
-          const bettingPayload: BettingPayload = {
-            stake,
-            autoCashoutMultiplier: hasAutoCashout ? autoCashoutValue : null,
-            userId: userData.userId,
-            clientSeed: "",
-            username: userData.username,
-            storeId,
-          };
+      const betPayload: BettingPayload = {
+        stake,
+        autoCashoutMultiplier: hasAutoCashout ? autoCashoutValue : null,
+        userId: userData.userId,
+        clientSeed: "",
+        username: userData.username,
+        storeId,
+      };
 
-          set({ isRequesting: true });
-          socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET, bettingPayload);
-          break;
+      set({ isRequesting: true });
+      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET, betPayload);
+    },
 
-        case betActions.canCashout:
-          set({ hasPlacedBet: false, betId: null });
-          break;
+    cashout: () => {
+      const { betId } = get();
+      const socket = useSocketStore.getState().socket;
 
-        case betActions.canScheduleBet:
-          if (!isAuthenticated || !userData) {
-            toast.error("Login required");
-            return;
-          }
+      if (!betId || !socket) return;
 
-          if (!socket) {
-            toast.error("Connection error. Refresh Page");
-            return;
-          }
+      set({ isRequesting: true });
 
-          set((state) => ({ hasScheduledBet: !state.hasScheduledBet }));
-          break;
+      const cashoutPayload: CashoutPayload = {
+        betId,
+      };
+
+      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT, cashoutPayload);
+    },
+
+    toggleScheduledBet: () => {
+      const { isAuthenticated } = useAuthStore.getState();
+      const socket = useSocketStore.getState().socket;
+
+      if (!isAuthenticated) {
+        toast.error("Login required");
+        return;
+      }
+
+      if (!socket) {
+        toast.error("Connection error. Refresh page");
+        return;
+      }
+
+      set((state) => ({ hasScheduledBet: !state.hasScheduledBet }));
+    },
+
+    // Main action for UI button - determines what to do based on current state
+    performBetAction: () => {
+      const {
+        canPlaceBet,
+        canCashout,
+        canScheduleBet,
+        placeBet,
+        cashout,
+        toggleScheduledBet,
+      } = get();
+
+      if (canPlaceBet()) {
+        placeBet();
+      } else if (canCashout()) {
+        cashout();
+      } else if (canScheduleBet()) {
+        toggleScheduledBet();
       }
     },
 
-    // Responds to phase changes for auto-bet or reset
-    handleGamePhaseChange() {
+    handleGamePhaseChange: () => {
       const {
         hasPlacedBet,
         hasScheduledBet,
         hasAutoBet,
+        canPlaceBet,
         resetBetState,
-        performBetAction,
+        placeBet,
       } = get();
       const gamePhase = useGameStore.getState().gamePhase;
 
+      // Reset state when round ends
       if (gamePhase === GamePhase.END && hasPlacedBet) {
         resetBetState();
       }
 
+      // Auto-place bet when new round starts and conditions are meet
       if (gamePhase === GamePhase.BETTING && (hasScheduledBet || hasAutoBet)) {
-        performBetAction();
+        if (canPlaceBet()) {
+          placeBet();
+        }
       }
     },
 
-    // Handles successful bet response
-    handleBetSuccess(data) {
+    resetBetState: () => {
+      set({
+        isRequesting: false,
+        hasScheduledBet: false,
+        hasPlacedBet: false,
+        betId: null,
+      });
+    },
+
+    // Socket event handlers
+    handleBetSuccess: (data: SuccessfulBetRes) => {
       const { betId, accountBalance } = data;
-      const updateUserData = useAuthStore.getState().updateUserData;
+      const { updateUserData } = useAuthStore.getState();
 
       set({
         betId,
@@ -211,15 +198,12 @@ const createBetStore = (storeId: string) => {
       updateUserData({ accountBalance });
     },
 
-    // Handles failed bet response
-    handleBetFailure(data) {
+    handleBetFailure: (data) => {
       set({
         isRequesting: false,
         hasPlacedBet: false,
         hasScheduledBet: false,
         betId: null,
-        hasAutoBet: false,
-        hasAutoCashout: false,
       });
 
       if (data?.message) {
@@ -227,33 +211,37 @@ const createBetStore = (storeId: string) => {
       }
     },
 
-    // Cleanup after cashout
-    onCashoutSucess() {
+    handleCashoutSuccess: (data: SuccessfulCashoutRes) => {
+      toast.success(`Cashout successful. ${data.payout}`);
+
       set({
         isRequesting: false,
         hasPlacedBet: false,
-        betId: null,
         hasScheduledBet: false,
+        betId: null,
       });
     },
 
-    // Resets bet state when round ends
-    resetBetState() {
-      set({
-        isRequesting: false,
-        hasScheduledBet: false,
-        betId: null,
-        hasPlacedBet: false,
-      });
+    handleCashoutFailure: (data) => {
+      set({ isRequesting: false });
+
+      const message = data?.message || "Cashout failed";
+      toast.error(message);
     },
 
-    // Attaches socket listeners for bet success/failure
-    subscribeToBetSocketEvents() {
+    // Socket event management
+    subscribeToSocketEvents: () => {
       const socket = useSocketStore.getState().socket;
-      const { handleBetSuccess, handleBetFailure } = get();
-
       if (!socket) return;
 
+      const {
+        handleBetSuccess,
+        handleBetFailure,
+        handleCashoutSuccess,
+        handleCashoutFailure,
+      } = get();
+
+      // Subscribe to bet events
       socket.on(
         SOCKET_EVENTS.LISTENERS.BETTING.PLACE_BET_SUCCESS(storeId),
         handleBetSuccess
@@ -262,20 +250,40 @@ const createBetStore = (storeId: string) => {
         SOCKET_EVENTS.LISTENERS.BETTING.PLACE_BET_ERROR(storeId),
         handleBetFailure
       );
+
+      // Subscribe to cashout events if we have a bet
+      const { betId } = get();
+      if (betId) {
+        socket.on(
+          SOCKET_EVENTS.LISTENERS.BETTING.CASHOUT_SUCCESS(betId),
+          handleCashoutSuccess
+        );
+        socket.on(
+          SOCKET_EVENTS.LISTENERS.BETTING.CASHOUT_ERROR(betId),
+          handleCashoutFailure
+        );
+      }
     },
 
-    // Removes listeners
-    unsubscribeFromBetSocketEvents() {
+    unsubscribeFromSocketEvents: () => {
       const socket = useSocketStore.getState().socket;
-
       if (!socket) return;
 
+      // Unsubscribe from bet events
       socket.off(SOCKET_EVENTS.LISTENERS.BETTING.PLACE_BET_SUCCESS(storeId));
       socket.off(SOCKET_EVENTS.LISTENERS.BETTING.PLACE_BET_ERROR(storeId));
+
+      // Unsubscribe from cashout events
+      const { betId } = get();
+      if (betId) {
+        socket.off(SOCKET_EVENTS.LISTENERS.BETTING.CASHOUT_SUCCESS(betId));
+        socket.off(SOCKET_EVENTS.LISTENERS.BETTING.CASHOUT_ERROR(betId));
+      }
     },
   }));
 };
 
+// Create store instances
 export const betStores = [
   { id: 1, useStore: createBetStore("1") },
   { id: 2, useStore: createBetStore("2") },

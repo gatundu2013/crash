@@ -12,19 +12,20 @@ const BetButton = ({
   hasScheduledBet,
   hasPlacedBet,
   hasAutoBet,
+  isRequesting,
   performBetAction,
+  isPlaceButtonDisabled,
   handleGamePhaseChange,
-  areBetControlsDisabled,
-  subscribeToBetSocketEvents,
-  unsubscribeFromBetSocketEvents,
+  subscribeToSocketEvents,
+  unsubscribeFromSocketEvents,
 }: BetButtonProps) => {
   const gamePhase = useGameStore((state) => state.gamePhase);
   const currentMultiplier = useGameStore((state) => state.currentMultiplier);
-  const { isPlaceBetButtonDisabled } = areBetControlsDisabled();
+  const isButtonDisabled = isPlaceButtonDisabled();
 
   useEffect(() => {
-    subscribeToBetSocketEvents();
-    return unsubscribeFromBetSocketEvents;
+    subscribeToSocketEvents();
+    return unsubscribeFromSocketEvents;
   }, []);
 
   useEffect(() => {
@@ -61,10 +62,16 @@ const BetButton = ({
           "bg-gradient-to-l from-[#FBD765] to-[#EF9E3F] text-black shadow-[0_0_12px_rgba(238,206,35,0.3),_inset_0_-2px_0_#CA7A1D]",
         content: (
           <div className="flex gap-1 items-baseline text-[15px]">
-            <span className="text-sm font-medium">Cashout KES</span>
-            <span className="font-semibold">
-              {(stake * currentMultiplier).toFixed(2)}
-            </span>
+            {isRequesting ? (
+              <span className="text-sm font-medium">Requesting...</span>
+            ) : (
+              <>
+                <span className="text-sm font-medium">Cashout KES</span>
+                <span className="font-semibold">
+                  {(stake * currentMultiplier).toFixed(2)}
+                </span>
+              </>
+            )}
           </div>
         ),
       };
@@ -86,7 +93,7 @@ const BetButton = ({
       <Button
         type="button"
         onClick={performBetAction}
-        disabled={isPlaceBetButtonDisabled}
+        disabled={isButtonDisabled}
         className={cn(
           "w-full h-full text-[16px] transition-all duration-300 font-semibold shadow-[0_0_12px_rgba(238,206,35,0.15),_inset_0_-2px_0_rgba(0,0,0,0.1)]",
           handleBetUI().className

@@ -27,7 +27,7 @@ const Autos = ({
   areBetControlsDisabled,
 }: AutosProps) => {
   const [displayValue, setDisplayValue] = useState(autoCashoutValue.toFixed(2));
-  const { areOtherBetControlsDisabled } = areBetControlsDisabled();
+  const areControlsDisabled = areBetControlsDisabled();
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -65,14 +65,14 @@ const Autos = ({
         <div className="flex items-center gap-1">
           <h4 className="text-sm">Auto Cashout</h4>
           <Switch
-            disabled={areOtherBetControlsDisabled}
+            disabled={areControlsDisabled}
             checked={hasAutoCashout}
             onCheckedChange={toggleAutoCashout}
           />
         </div>
         <div className="flex items-center bg-layer-1 w-16 h-7 rounded-full">
           <Input
-            disabled={areOtherBetControlsDisabled || !hasAutoCashout}
+            disabled={areControlsDisabled || !hasAutoCashout}
             onBlur={handleInputBlur}
             onChange={handleInputChange}
             value={displayValue}

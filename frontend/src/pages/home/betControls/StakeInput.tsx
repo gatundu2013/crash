@@ -15,7 +15,7 @@ const StakeInput = ({
   areBetControlsDisabled,
 }: StakeInputProps) => {
   const [displayValue, setDisplayValue] = useState(stake.toFixed(2));
-  const { areOtherBetControlsDisabled } = areBetControlsDisabled();
+  const areControlsDisabled = areBetControlsDisabled();
 
   const handleIncrement = () => {
     const next = Math.min(stake + 10, GAME_CONFIG.MAX_STAKE);
@@ -66,7 +66,7 @@ const StakeInput = ({
       <Button
         type="button"
         onClick={handleDecrement}
-        disabled={stake <= GAME_CONFIG.MIN_STAKE || areOtherBetControlsDisabled}
+        disabled={stake <= GAME_CONFIG.MIN_STAKE || areControlsDisabled}
         className={buttonClass}
       >
         <RxMinus />
@@ -76,7 +76,7 @@ const StakeInput = ({
         value={displayValue}
         onChange={handleInputChange}
         onBlur={handleInputBlur}
-        disabled={areOtherBetControlsDisabled}
+        disabled={areControlsDisabled}
         className="h-full text-center bg-inherit border-none font-semibold tracking-wide 
                    focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none"
       />
@@ -84,7 +84,7 @@ const StakeInput = ({
       <Button
         type="button"
         onClick={handleIncrement}
-        disabled={stake >= GAME_CONFIG.MAX_STAKE || areOtherBetControlsDisabled}
+        disabled={stake >= GAME_CONFIG.MAX_STAKE || areControlsDisabled}
         className={buttonClass}
       >
         <RxPlus />

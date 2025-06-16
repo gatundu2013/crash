@@ -10,6 +10,8 @@ export const SOCKET_EVENTS = {
     CONNECT: "connection",
     DISCONNECT: "disconnect",
 
+    BROADCAST_TOP_STAKERS: "broadcastTopStakers",
+
     GAME_PHASE: {
       PREPARING: "game:preparing",
       BETTING: "game:betting",
@@ -24,9 +26,8 @@ export const SOCKET_EVENTS = {
       PLACE_BET_ERROR: (storeId: string) =>
         `betting:placebetError:${storeId}`.trim(),
 
-      BET_ID: "betting:betId",
-      CASHOUT_ERROR: "cashout:cashoutError",
-      CASHOUT_SUCCESS: "cashout:cashoutSuccess",
+      CASHOUT_ERROR: (betId: string) => `cashout:cashoutError:${betId}`,
+      CASHOUT_SUCCESS: (betId: string) => `cashout:cashoutSuccess:${betId}`,
     },
   },
 };

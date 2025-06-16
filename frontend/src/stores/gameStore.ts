@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { GamePhase, type GameStoreI } from "../types/game.types";
+import type { TopStakersRes } from "../types/game.types";
 
 const useGameStore = create<GameStoreI>((set) => ({
   gamePhase: GamePhase.IDLE,
@@ -10,7 +11,7 @@ const useGameStore = create<GameStoreI>((set) => ({
   previousMultipliers: [],
   topStakers: [],
   countDown: 1,
-  allBetsSize: 0,
+  totalBets: 0,
   cashedOutBetsSize: 0,
   totalBetAmount: 0,
 
@@ -43,6 +44,14 @@ const useGameStore = create<GameStoreI>((set) => ({
     set({
       gamePhase: GamePhase.ERROR,
       message,
+    });
+  },
+
+  handleTopStakers(data: TopStakersRes) {
+    set({
+      topStakers: data.topStakers,
+      totalBetAmount: data.totalBetAmout,
+      totalBets: data.totalBets,
     });
   },
 }));

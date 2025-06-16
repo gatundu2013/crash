@@ -17,6 +17,7 @@ export interface TopStaker {
   stake: number;
   payout: number | null;
   cashoutMultiplier: number | null;
+  username: string;
 }
 export interface GameStoreI {
   gamePhase: GamePhase;
@@ -27,7 +28,7 @@ export interface GameStoreI {
   previousMultipliers: PreviousMultiplier[];
   topStakers: TopStaker[];
   countDown: number;
-  allBetsSize: number;
+  totalBets: number;
   cashedOutBetsSize: number;
   totalBetAmount: number;
 
@@ -37,6 +38,7 @@ export interface GameStoreI {
   handleEndPhase: (finalCrashPoint: number) => void;
   handleBettingPhase: (countDown: number) => void;
   handleErrorPhase: (message: string) => void;
+  handleTopStakers: (data: TopStakersRes) => void;
 }
 
 export type PreparingPhaseData = {
@@ -53,4 +55,10 @@ export type BettingPhaseData = {
 };
 export type ErrorPhaseData = {
   message: string;
+};
+
+export type TopStakersRes = {
+  totalBetAmout: number;
+  topStakers: TopStaker[];
+  totalBets: number;
 };

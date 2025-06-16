@@ -6,6 +6,7 @@ import type {
   EndPhaseData,
   PreparingPhaseData,
   RunningPhaseData,
+  TopStakersRes,
 } from "@/types/game.types";
 import { useEffect } from "react";
 
@@ -16,6 +17,7 @@ const useGameListeners = () => {
     handleRunningPhase,
     handleEndPhase,
     handleBettingPhase,
+    handleTopStakers,
   } = useGameStore.getState();
 
   useEffect(() => {
@@ -39,6 +41,12 @@ const useGameListeners = () => {
       {
         eventName: SOCKET_EVENTS.LISTENERS.GAME_PHASE.BETTING,
         handler: (data: BettingPhaseData) => handleBettingPhase(data.countDown),
+      },
+      {
+        eventName: SOCKET_EVENTS.LISTENERS.BROADCAST_TOP_STAKERS,
+        handler: (data: TopStakersRes) => {
+          handleTopStakers(data);
+        },
       },
     ];
 

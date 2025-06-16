@@ -6,7 +6,7 @@ interface QuickStakeProps
   extends Pick<BetStoreI, "setStake" | "areBetControlsDisabled"> {}
 
 const QuickStakes = ({ setStake, areBetControlsDisabled }: QuickStakeProps) => {
-  const { areOtherBetControlsDisabled } = areBetControlsDisabled();
+  const areControlsDisabled = areBetControlsDisabled();
 
   const predefinedStakes = [
     GAME_CONFIG.MIN_STAKE,
@@ -23,7 +23,7 @@ const QuickStakes = ({ setStake, areBetControlsDisabled }: QuickStakeProps) => {
     <div className="flex gap-1.5">
       {predefinedStakes.map((stakeAmount, index) => (
         <Button
-          disabled={areOtherBetControlsDisabled}
+          disabled={areControlsDisabled}
           onClick={() => handleStakeSelection(stakeAmount)}
           key={index}
           className="h-6 w-full font-normal flex-1 px-3 bg-layer-2 text-white/80 rounded-full transition-colors"
