@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { BetStoreI } from "@/stores/betStore";
 import useGameStore from "@/stores/gameStore";
+import type { BetStoreI } from "@/types/bet.types";
 import { GamePhase } from "@/types/game.types";
 import { useEffect } from "react";
 
@@ -13,6 +13,7 @@ const BetButton = ({
   hasPlacedBet,
   hasAutoBet,
   isRequesting,
+  betId,
   performBetAction,
   isPlaceButtonDisabled,
   handleGamePhaseChange,
@@ -26,7 +27,7 @@ const BetButton = ({
   useEffect(() => {
     subscribeToSocketEvents();
     return unsubscribeFromSocketEvents;
-  }, []);
+  }, [betId]);
 
   useEffect(() => {
     handleGamePhaseChange();

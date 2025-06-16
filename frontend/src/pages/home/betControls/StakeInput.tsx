@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GAME_CONFIG } from "@/config/game.config";
 import { cn } from "@/lib/utils";
-import type { BetStoreI } from "@/stores/betStore";
+import type { BetStoreI } from "@/types/bet.types";
 import { useEffect, useState, type ChangeEvent } from "react";
 import { RxMinus, RxPlus } from "react-icons/rx";
 
