@@ -16,6 +16,9 @@ import BetHistory from "../../models/betHistory.model";
 import { AccountStatus } from "../../types/user.types";
 import { GameError } from "../../utils/errors/gameError";
 import { EVENT_NAMES, eventBus } from "../eventBus";
+import bettingSchema from "../../validations/bet/betting.validation";
+import { BettingError } from "../../utils/errors/bettingError";
+import { AppError } from "../../utils/errors/appError";
 
 /**
  * BettingManager handles high-volume bet processing using a staged approach with batch processing.
@@ -72,61 +75,84 @@ class BettingManager {
    * This is the main entry point for new betting requests.
    */
   public async stageBet(params: BettingPayload, socket: Socket) {
-    // Validation 1: Check if betting is currently allowed
-    if (!this.isBettingWindowOpen) {
-      console.warn("[BettingManager-StageBet]:Betting window is closed");
+    try {
+      const { error } = bettingSchema.validate(params);
+
+      // Validation 1: Payload validation
+      if (error) {
+        throw new BettingError({
+          internalMessage: error.message,
+          description:
+            error.details[0].context?.label == "stake"
+              ? error.message
+              : "Failed to placeBet", // show only stake errors to user -- The other error only arises due to frontend developer errors
+          httpCode: 400,
+          isOperational: true,
+        });
+      }
+
+      // Validation 2: Check if betting is currently allowed
+      if (!this.isBettingWindowOpen) {
+        throw new BettingError({
+          internalMessage: "Betting window is closed",
+          description: "Betting window is closed",
+          httpCode: 400,
+          isOperational: true,
+        });
+      }
+
+      // Validation 3: Check if user has reached maximum concurrent bets
+      if (this.userHasMaxBets(params.userId)) {
+        throw new BettingError({
+          internalMessage: "User has reached maximum concurrent bets",
+          description: "User has reached maximum concurrent bets",
+          httpCode: 400,
+          isOperational: true,
+        });
+      }
+
+      // Generate unique identifier for this bet
+      const betId = uuidv4();
+
+      // Update user-to-bet mapping for bet tracking and validation
+      const userBetIds = this.userIdsToBetIds.get(params.userId) || new Set();
+      userBetIds.add(betId);
+      this.userIdsToBetIds.set(params.userId, userBetIds);
+
+      const betToStage: StagedBet = {
+        payload: { ...params, betId },
+        socket,
+      };
+
+      // Store bet in staging area
+      this.stagedBetsMap.set(betId, betToStage);
+
+      // This logic starts the batch processing loop using a debounced trigger.
+      // It ensures that when the system is idle, the first bet doesn't get
+      // processed alone. Instead, it waits X(ms) to allow a "wave" of bets
+      // to accumulate, making the first batch more efficient.
+
+      // The condition ensures we only start this timer if:
+      // 1. The processing loop is not already running (`!this.isProcessing`).
+      // 2. A start-up timer is not already pending (`!this.debounceTimerId`).
+      if (!this.isProcessing && !this.debounceTimerId) {
+        this.debounceTimerId = setTimeout(() => {
+          this.processBatch().catch(console.error);
+          this.debounceTimerId = null;
+        }, this.config.DEBOUNCE_TIME_MS);
+      }
+    } catch (err) {
+      console.error("Failed to placeBet", err);
+
+      let message =
+        err instanceof AppError ? err.description : "Placebet error";
+
       socket.emit(
         SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR(params.storeId),
         {
-          message: "Betting window is closed",
+          message,
         }
       );
-      return;
-    }
-
-    // Validation 2: Check if user has reached maximum concurrent bets
-    if (this.userHasMaxBets(params.userId)) {
-      console.warn(
-        "[BettingManager-StageBet]:User has reached maximum concurrent bets"
-      );
-      socket.emit(
-        SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR(params.storeId),
-        {
-          message: `Max bet per user is ${this.config.MAX_BETS_PER_USER} bets`,
-        }
-      );
-      return;
-    }
-
-    // Generate unique identifier for this bet
-    const betId = uuidv4();
-
-    // Update user-to-bet mapping for bet tracking and validation
-    const userBetIds = this.userIdsToBetIds.get(params.userId) || new Set();
-    userBetIds.add(betId);
-    this.userIdsToBetIds.set(params.userId, userBetIds);
-
-    const betToStage: StagedBet = {
-      payload: { ...params, betId },
-      socket,
-    };
-
-    // Store bet in staging area
-    this.stagedBetsMap.set(betId, betToStage);
-
-    // This logic starts the batch processing loop using a debounced trigger.
-    // It ensures that when the system is idle, the first bet doesn't get
-    // processed alone. Instead, it waits X(ms) to allow a "wave" of bets
-    // to accumulate, making the first batch more efficient.
-
-    // The condition ensures we only start this timer if:
-    // 1. The processing loop is not already running (`!this.isProcessing`).
-    // 2. A start-up timer is not already pending (`!this.debounceTimerId`).
-    if (!this.isProcessing && !this.debounceTimerId) {
-      this.debounceTimerId = setTimeout(() => {
-        this.processBatch().catch(console.error);
-        this.debounceTimerId = null;
-      }, this.config.DEBOUNCE_TIME_MS);
     }
   }
 
