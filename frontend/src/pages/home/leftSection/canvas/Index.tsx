@@ -1,6 +1,6 @@
 import { useRef } from "react";
 
-const CanvasComponent = () => {
+const Canvas = () => {
   const parentRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -14,4 +14,4 @@ const CanvasComponent = () => {
   );
 };
 
-export default CanvasComponent;
+export default Canvas;

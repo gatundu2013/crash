@@ -13,6 +13,7 @@ import type {
   SuccessfulCashoutRes,
 } from "@/types/bet.types";
 import { SOCKET_EVENTS } from "@/config/socketEvents.config";
+import { cashoutSuccessToaster } from "@/components/toasters";
 
 const initialState = {
   stake: GAME_CONFIG.MIN_STAKE,
@@ -212,7 +213,14 @@ const createBetStore = (storeId: string) => {
     },
 
     handleCashoutSuccess: (data: SuccessfulCashoutRes) => {
-      toast.success(`Cashout successful. ${data.payout}`);
+      const updateUserData = useAuthStore.getState().updateUserData;
+
+      console.log("CALLEDDDD");
+
+      cashoutSuccessToaster({
+        cashoutMultiplier: data.multiplier,
+        payout: data.payout,
+      });
 
       set({
         isRequesting: false,
@@ -220,10 +228,16 @@ const createBetStore = (storeId: string) => {
         hasScheduledBet: false,
         betId: null,
       });
+      updateUserData({ accountBalance: data.newAccountBalance });
     },
 
     handleCashoutFailure: (data) => {
-      set({ isRequesting: false });
+      set({
+        isRequesting: false,
+        hasPlacedBet: false,
+        hasScheduledBet: false,
+        betId: null,
+      });
 
       const message = data?.message || "Cashout failed";
       toast.error(message);

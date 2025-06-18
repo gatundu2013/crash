@@ -62,5 +62,5 @@ export interface SuccessfulBetRes {
 export interface SuccessfulCashoutRes {
   payout: number;
   multiplier: number;
-  accountBalance: number;
+  newAccountBalance: number;
 }

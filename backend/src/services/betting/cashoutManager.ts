@@ -341,8 +341,9 @@ class CashoutManager {
       this.config.MAX_BATCH_SIZE
     );
 
-    // Group similar users together to optimize database operations.
+    // Group user cashouts by user ID to optimize database operations.
     const groupedUserCashouts = new Map<string, GroupedUserCashouts>();
+
     batch.forEach((cashout) => {
       const existing = groupedUserCashouts.get(cashout.userId);
 

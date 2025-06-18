@@ -1,13 +1,6 @@
 import { SOCKET_EVENTS } from "@/config/socketEvents.config";
 import useGameStore from "@/stores/gameStore";
 import useSocketStore from "@/stores/socketStore";
-import type {
-  BettingPhaseData,
-  EndPhaseData,
-  PreparingPhaseData,
-  RunningPhaseData,
-  TopStakersRes,
-} from "@/types/game.types";
 import { useEffect } from "react";
 
 const useGameListeners = () => {
@@ -17,7 +10,8 @@ const useGameListeners = () => {
     handleRunningPhase,
     handleEndPhase,
     handleBettingPhase,
-    handleTopStakers,
+    handleBroadcastSuccessfulBets,
+    handleBroadcastSuccessfulCashouts,
   } = useGameStore.getState();
 
   useEffect(() => {
@@ -26,27 +20,27 @@ const useGameListeners = () => {
     const gameListeners = [
       {
         eventName: SOCKET_EVENTS.LISTENERS.GAME_PHASE.PREPARING,
-        handler: (data: PreparingPhaseData) =>
-          handlePreparingPhase(data.hashedServerSeed),
+        handler: handlePreparingPhase,
       },
       {
         eventName: SOCKET_EVENTS.LISTENERS.GAME_PHASE.RUNNING,
-        handler: (data: RunningPhaseData) =>
-          handleRunningPhase(data.currentMultiplier),
+        handler: handleRunningPhase,
       },
       {
         eventName: SOCKET_EVENTS.LISTENERS.GAME_PHASE.END,
-        handler: (data: EndPhaseData) => handleEndPhase(data.finalCrashPoint),
+        handler: handleEndPhase,
       },
       {
         eventName: SOCKET_EVENTS.LISTENERS.GAME_PHASE.BETTING,
-        handler: (data: BettingPhaseData) => handleBettingPhase(data.countDown),
+        handler: handleBettingPhase,
       },
       {
-        eventName: SOCKET_EVENTS.LISTENERS.BROADCAST_TOP_STAKERS,
-        handler: (data: TopStakersRes) => {
-          handleTopStakers(data);
-        },
+        eventName: SOCKET_EVENTS.LISTENERS.BROADCAST_SUCCESSFUL_BETS,
+        handler: handleBroadcastSuccessfulBets,
+      },
+      {
+        eventName: SOCKET_EVENTS.LISTENERS.BROADCAST_SUCCESSFUL_CASHOUTS,
+        handler: handleBroadcastSuccessfulCashouts,
       },
     ];
 

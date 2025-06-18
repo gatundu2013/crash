@@ -1,12 +1,10 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Avatar1 from "../../../../assets/avatar.png";
 import { Button } from "@/components/ui/button";
-import { RiChat1Fill, RiWallet3Line, RiUserSettingsLine } from "react-icons/ri";
-import useChatStore from "@/stores/chatStore";
+import { RiWallet3Line, RiUserSettingsLine } from "react-icons/ri";
 import useAuthStore from "@/stores/authStore";
 
 const NavAutheticated = () => {
-  const toggleChats = useChatStore((state) => state.toggleChats);
   const userData = useAuthStore((state) => state.userData);
 
   return (
@@ -29,17 +27,6 @@ const NavAutheticated = () => {
       >
         Deposit
       </Button>
-
-      <div className="relative">
-        <Button
-          variant="secondary"
-          size="sm"
-          className="p-2"
-          onClick={toggleChats}
-        >
-          <RiChat1Fill className="text-xl" />
-        </Button>
-      </div>
 
       <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
         <Avatar className="border-2 border-layer-5 h-9 w-9">

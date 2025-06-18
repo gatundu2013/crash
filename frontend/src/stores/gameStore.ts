@@ -1,6 +1,15 @@
+import {
+  GamePhase,
+  type GameStoreI,
+  type PreparingPhaseData,
+  type RunningPhaseData,
+  type EndPhaseData,
+  type BettingPhaseData,
+  type ErrorPhaseData,
+  type BroadcastBetRes,
+  type BroadcastCashoutRes,
+} from "@/types/game.types";
 import { create } from "zustand";
-import { GamePhase, type GameStoreI } from "../types/game.types";
-import type { TopStakersRes } from "../types/game.types";
 
 const useGameStore = create<GameStoreI>((set) => ({
   gamePhase: GamePhase.IDLE,
@@ -12,46 +21,59 @@ const useGameStore = create<GameStoreI>((set) => ({
   topStakers: [],
   countDown: 1,
   totalBets: 0,
+  totalCashouts: 0,
   cashedOutBetsSize: 0,
   totalBetAmount: 0,
 
   // PHASE HANDLERS
-  handlePreparingPhase(hashedServerSeed: string) {
+
+  handlePreparingPhase(data: PreparingPhaseData) {
     set({
       gamePhase: GamePhase.PREPARING,
-      hashedServerSeed,
-    });
-  },
-  handleRunningPhase(currentMultiplier: number) {
-    set({
-      gamePhase: GamePhase.RUNNING,
-      currentMultiplier,
-    });
-  },
-  handleEndPhase(finalCrashPoint: number) {
-    set({
-      gamePhase: GamePhase.END,
-      finalCrashPoint,
-    });
-  },
-  handleBettingPhase(countDown: number) {
-    set({
-      gamePhase: GamePhase.BETTING,
-      countDown,
-    });
-  },
-  handleErrorPhase(message: string) {
-    set({
-      gamePhase: GamePhase.ERROR,
-      message,
+      hashedServerSeed: data?.hashedServerSeed,
     });
   },
 
-  handleTopStakers(data: TopStakersRes) {
+  handleRunningPhase(data: RunningPhaseData) {
     set({
-      topStakers: data.topStakers,
-      totalBetAmount: data.totalBetAmout,
-      totalBets: data.totalBets,
+      gamePhase: GamePhase.RUNNING,
+      currentMultiplier: data?.currentMultiplier,
+    });
+  },
+
+  handleEndPhase(data: EndPhaseData) {
+    set({
+      gamePhase: GamePhase.END,
+      finalCrashPoint: data?.finalCrashPoint,
+    });
+  },
+
+  handleBettingPhase(data: BettingPhaseData) {
+    set({
+      gamePhase: GamePhase.BETTING,
+      countDown: data?.countDown,
+    });
+  },
+
+  handleErrorPhase(data: ErrorPhaseData) {
+    set({
+      gamePhase: GamePhase.ERROR,
+      message: data?.message,
+    });
+  },
+
+  handleBroadcastSuccessfulBets(data: BroadcastBetRes) {
+    set({
+      totalBetAmount: data.totalBetAmount ?? 0,
+      totalBets: data.totalBets ?? 0,
+      topStakers: data.topStakers ?? [],
+    });
+  },
+
+  handleBroadcastSuccessfulCashouts(data: BroadcastCashoutRes) {
+    set({
+      topStakers: data.topStakers && data.topStakers,
+      totalCashouts: data?.totalCashouts ?? 0,
     });
   },
 }));

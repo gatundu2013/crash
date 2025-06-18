@@ -10,8 +10,8 @@ export const SOCKET_EVENTS = {
     CONNECT: "connection",
     DISCONNECT: "disconnect",
 
-    BROADCAST_TOP_STAKERS: "broadcastTopStakers",
-
+    BROADCAST_SUCCESSFUL_BETS: "broadcastSuccessfulBets",
+    BROADCAST_SUCCESSFUL_CASHOUTS: "broadSuccessfulCashouts",
     GAME_PHASE: {
       PREPARING: "game:preparing",
       BETTING: "game:betting",

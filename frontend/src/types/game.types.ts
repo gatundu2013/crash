@@ -19,6 +19,7 @@ export interface TopStaker {
   cashoutMultiplier: number | null;
   username: string;
 }
+
 export interface GameStoreI {
   gamePhase: GamePhase;
   hashedServerSeed: string;
@@ -31,34 +32,42 @@ export interface GameStoreI {
   totalBets: number;
   cashedOutBetsSize: number;
   totalBetAmount: number;
+  totalCashouts: number;
 
   // phase handlers
-  handlePreparingPhase: (hashedServerSeed: string) => void;
-  handleRunningPhase: (currentMultiplier: number) => void;
-  handleEndPhase: (finalCrashPoint: number) => void;
-  handleBettingPhase: (countDown: number) => void;
-  handleErrorPhase: (message: string) => void;
-  handleTopStakers: (data: TopStakersRes) => void;
+  handlePreparingPhase: (data: PreparingPhaseData) => void;
+  handleRunningPhase: (data: RunningPhaseData) => void;
+  handleEndPhase: (data: EndPhaseData) => void;
+  handleBettingPhase: (data: BettingPhaseData) => void;
+  handleErrorPhase: (data: ErrorPhaseData) => void;
+
+  handleBroadcastSuccessfulBets: (data: BroadcastBetRes) => void;
+  handleBroadcastSuccessfulCashouts: (data: BroadcastCashoutRes) => void;
 }
 
-export type PreparingPhaseData = {
+export interface PreparingPhaseData {
   hashedServerSeed: string;
-};
-export type RunningPhaseData = {
+}
+export interface RunningPhaseData {
   currentMultiplier: number;
-};
-export type EndPhaseData = {
+}
+export interface EndPhaseData {
   finalCrashPoint: number;
-};
-export type BettingPhaseData = {
+}
+export interface BettingPhaseData {
   countDown: number;
-};
-export type ErrorPhaseData = {
+}
+export interface ErrorPhaseData {
   message: string;
-};
+}
 
-export type TopStakersRes = {
-  totalBetAmout: number;
-  topStakers: TopStaker[];
+export interface BroadcastBetRes {
+  totalBetAmount: number;
   totalBets: number;
-};
+  topStakers: TopStaker[];
+}
+
+export interface BroadcastCashoutRes {
+  topStakers: TopStaker[];
+  totalCashouts: number;
+}

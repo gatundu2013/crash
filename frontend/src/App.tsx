@@ -22,7 +22,13 @@ function App() {
 
   return (
     <div className="w-[100vw] h-[100vh] overflow-x-hidden">
-      <ToastContainer />
+      <ToastContainer
+        theme="dark"
+        position="top-center"
+        hideProgressBar
+        icon={false}
+        className={"cursor-pointer"}
+      />
       <RouterProvider router={routes} />
     </div>
   );
