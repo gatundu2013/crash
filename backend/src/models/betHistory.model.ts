@@ -1,7 +1,7 @@
 import { Document, model, Schema } from "mongoose";
 import { SingleBet } from "../types/bet.types";
 
-interface BetHistoryDoc extends SingleBet, Document {
+export interface BetHistoryDoc extends SingleBet, Document {
   roundId: string;
   finalMultiplier: number | null;
   betId: string;
@@ -19,7 +19,7 @@ const betHistorySchema = new Schema<BetHistoryDoc>(
     cashoutMultiplier: { type: Number, default: null },
     finalMultiplier: { type: Number, default: null },
 
-    autoCashoutMultiplier: { type: Number, required: true },
+    autoCashoutMultiplier: { type: Number, default: null },
     status: { type: String, required: true },
   },
   { timestamps: true }

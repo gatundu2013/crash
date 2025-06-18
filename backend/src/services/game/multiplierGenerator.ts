@@ -27,9 +27,6 @@ class MultiplierGenerator {
    */
   constructor({ clientSeed, clientSeedDetails }: MultiplierGeneratorDep) {
     if (!GAME_CONFIG.CLIENT_SEED_REGEX.test(clientSeed)) {
-      console.warn(
-        `Invalid client seed provided: "${clientSeed}". Falling back to a random seed.`
-      );
       this.clientSeed = GAME_CONFIG.DEFAULT_CLIENT_SEED;
       this.clientSeedDetails = [];
     } else {
@@ -108,6 +105,8 @@ class MultiplierGenerator {
     this.decimal = hashPrefixInDecimal;
     this.rawMultiplier = parseFloat(rawMultiplier.toFixed(2));
     this.finalMultiplier = parseFloat(finalMultiplier.toFixed(2));
+
+    console.log(this.finalMultiplier);
   }
 
   /**

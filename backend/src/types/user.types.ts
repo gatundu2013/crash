@@ -16,4 +16,5 @@ export interface UserI {
   accountStatus: AccountStatus;
   role: Role;
   agreeToTerms: boolean;
+  userId: string;
 }

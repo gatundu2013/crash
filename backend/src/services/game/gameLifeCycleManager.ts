@@ -61,26 +61,25 @@ class GameLifeCycleManager {
     try {
       // Close betting window - no more bets are accepted for current round
       bettingManager.closeBettingWindow();
-
-      // Transition to preparing phase and notify all clients
       roundStateManager.setGamePhase(GamePhase.PREPARING);
+
+      // Generate the predetermined crash point for this round
+      roundStateManager.generateProvablyFairOutcome();
+      const roundState = roundStateManager.getState();
+
+      // notify all clients
       io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.PREPARING, {
-        gamePhase: GamePhase.PREPARING,
+        serverSeed: roundState.provablyFairOutcome?.hashedServerSeed!,
       });
 
       // Wait for any pending bet processing to complete before proceeding
       // This ensures data integrity
       while (bettingManager.getIsProcessing()) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
-      // Generate the predetermined crash point for this round
-      roundStateManager.generateProvablyFairOutcome();
-
       // Persist round data to database if any bets were placed
-      if (roundStateManager.getState().betsMap.size > 0) {
-        const roundState = roundStateManager.getState();
-
+      if (roundState.betsMap.size > 0) {
         await roundAnalyticsManager.saveCompleteRoundResultsWithRetries({
           roundId: roundState.roundId!,
           totalPlayers: roundState.betsMap.size,
@@ -96,9 +95,7 @@ class GameLifeCycleManager {
 
       // Transition to running phase and notify all clients
       roundStateManager.setGamePhase(GamePhase.RUNNING);
-      io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.RUNNING, {
-        gamePhase: GamePhase.RUNNING,
-      });
+      cashoutManager.openCashoutWindow();
 
       // Begin the multiplier increment cycle
       this.incrementMultiplier();
@@ -143,9 +140,8 @@ class GameLifeCycleManager {
     roundStateManager.setCurrentMultiplier(newMultiplier);
 
     // Broadcast current multiplier to all connected clients
-    io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_CURRENT_MULTIPLIER, {
-      gamePhase: GamePhase.RUNNING,
-      multiplier: newMultiplier,
+    io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.RUNNING, {
+      currentMultiplier: newMultiplier,
     });
 
     // Schedule next multiplier increment (creates smooth animation effect)
@@ -168,17 +164,25 @@ class GameLifeCycleManager {
       this.multiplierTimeoutId = null;
     }
 
+    cashoutManager.closeCashoutWindow();
+
     // Notify all clients that the round has crashed/ended
     io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.END, {
-      gamePhase: GamePhase.END,
       finalCrashPoint:
         roundStateManager.getState().provablyFairOutcome?.finalMultiplier,
     });
 
     //Wait for all cashouts to complete
-    const cashoutsState = cashoutManager.getState();
-    while (cashoutsState.isProcessing || cashoutsState.stagedCashoutsSize > 0) {
-      await new Promise((resolve) => setTimeout(() => resolve, 100));
+    while (
+      cashoutManager.getState().isProcessing ||
+      cashoutManager.getState().stagedCount > 0
+    ) {
+      console.log(
+        `[GameLifeCycleManager]: Waiting for cashouts to complete--${
+          cashoutManager.getState().stagedCount
+        }`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     // Bust all bets that were not cashedout
@@ -186,11 +190,16 @@ class GameLifeCycleManager {
       roundStateManager.getState().roundId!
     );
 
+    //Done for better UI rendering
+    //Without this the UI would snap to the next phase
+    // User would not be able to see the final multplier
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+
     // Reset game state for the next round
-    roundStateManager.reset();
+    const roundId = roundStateManager.reset();
 
     // Open betting window for next round
-    bettingManager.openBettingWindow();
+    bettingManager.openBettingWindow(roundId);
     roundStateManager.setGamePhase(GamePhase.BETTING);
 
     // Start countdown timer for next round's betting period
@@ -227,9 +236,8 @@ class GameLifeCycleManager {
 
       // Send additional countdown update with current game phase
       // This ensures clients stay synchronized with game state
-      io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_NEXT_GAME_COUNT_DOWN, {
+      io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.BETTING, {
         countDown: remaining,
-        gamePhase: roundStateManager.getState().gamePhase,
       });
     }, this.COUNTDOWN_INTERVAL_MS);
   }

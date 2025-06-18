@@ -1,10 +1,8 @@
 export const SOCKET_EVENTS = {
   EMITTERS: {
     //game
-    BROADCAST_HASHED_SERVER_SEED: "broadcastHashedServerSeed",
-    BROADCAST_CURRENT_MULTIPLIER: "broadcastCurrentMultiplier",
-    BROADCAST_NEXT_GAME_COUNT_DOWN: "broadcastNextGameCountDown",
-    BROADCAST_TOP_STAKERS: "broadcastLiveBets",
+    BROADCAST_SUCCESSFUL_BETS: "broadcastSuccessfulBets",
+    BROADCAST_SUCCESSFUL_CASHOUTS: "broadSuccessfulCashouts",
 
     GAME_PHASE: {
       PREPARING: "game:preparing",
@@ -15,17 +13,24 @@ export const SOCKET_EVENTS = {
     },
 
     BETTING: {
-      PLACE_BET_SUCCESS: "betting:placebetSuccess",
-      PLACE_BET_ERROR: "betting:placebetError",
-      BET_ID: "betting:betId",
+      PLACE_BET_SUCCESS: (storeId: string) =>
+        `betting:placebetSuccess:${storeId}`.trim(),
+      PLACE_BET_ERROR: (storeId: string) =>
+        `betting:placebetError:${storeId}`.trim(),
 
-      CASHOUT_ERROR: "cashout:cashoutError",
-      CASHOUT_SUCCESS: "cashout:cashoutSuccess",
+      CASHOUT_SUCCESS: (betId: string) =>
+        `cashout:cashoutSuccess:${betId}`.trim(),
+      CASHOUT_ERROR: (betId: string) => `cashout:cashoutError:${betId}`.trim(),
     },
   },
 
   LISTENERS: {
     CONNECT: "connection",
     DISCONNECT: "disconnect",
+
+    BETTING: {
+      PLACE_BET: "game:placeBet",
+      CASHOUT: "game:cashout",
+    },
   },
 };

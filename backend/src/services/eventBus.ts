@@ -9,7 +9,7 @@ import { EventEmitter } from "events";
  * Import these to avoid typos and keep event names consistent across modules.
  */
 export const EVENT_NAMES = {
-  BETS_ACCEPTED: "betsAccepted",
+  ACCEPTED_BETS: "acceptedBets",
   CASHOUTS_PROCESSED: "cashoutsProcessed",
 };
 

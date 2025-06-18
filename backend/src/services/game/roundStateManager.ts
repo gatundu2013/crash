@@ -30,13 +30,14 @@ class RoundStateManager {
   private currentMultiplier: number = 1;
   private roundId: string | null = null;
   private provablyFairOutcome: ProvablyFairOutcomeI | null = null;
-  private totalBetAmount: number = 0;
+  private totalBetAmount = 0;
+  private totalCashouts = 0;
   private activeBetsMap: Map<string, BetInMemory> = new Map();
   private topStakers: TopStaker[] = [];
 
   // Subscribe to events from betting and cashout managers
   private constructor() {
-    eventBus.on(EVENT_NAMES.BETS_ACCEPTED, this.handleAcceptedBets.bind(this));
+    eventBus.on(EVENT_NAMES.ACCEPTED_BETS, this.handleAcceptedBets.bind(this));
     eventBus.on(
       EVENT_NAMES.CASHOUTS_PROCESSED,
       this.handleProcessedCashouts.bind(this)
@@ -95,9 +96,9 @@ class RoundStateManager {
     acceptedBets.forEach((bet) => {
       this.activeBetsMap.set(bet.payload.betId, {
         bet: {
-          autoCashoutMultiplier: 1,
+          autoCashoutMultiplier: bet.payload.autoCashoutMultiplier,
           betId: bet.payload.betId,
-          cashoutMultiplier: 40,
+          cashoutMultiplier: null,
           payout: null,
           userId: bet.payload.userId,
           stake: bet.payload.stake,
@@ -106,30 +107,42 @@ class RoundStateManager {
         socket: bet.socket,
       });
 
+      // Calculate total bet Amount
       this.totalBetAmount += bet.payload.stake;
 
-      // Update top stakers list
+      // A new bet only matters if the list isn't full, OR if the bet is bigger than the smallest in the list.
       const isListFull = this.topStakers.length >= GAME_CONFIG.MAX_TOP_STAKERS;
-      const lowest = this.topStakers[this.topStakers.length - 1];
+      const lowestStakeInList = isListFull
+        ? this.topStakers[this.topStakers.length - 1].stake
+        : 0;
 
-      if (!isListFull || (lowest && bet.payload.stake > lowest.stake)) {
+      // Modify the array if the new bet qualifies to be in the top list
+      if (!isListFull || bet.payload.stake > lowestStakeInList) {
         this.topStakers.push({
-          cashoutMultiplier: null,
           betId: bet.payload.betId,
+          cashoutMultiplier: null,
           payout: null,
           stake: bet.payload.stake,
           username: bet.payload.username,
         });
 
-        this.topStakers.sort((a, b) => b.stake - a.stake);
         if (this.topStakers.length > GAME_CONFIG.MAX_TOP_STAKERS) {
           this.topStakers.pop();
         }
+
+        this.topStakers.sort((a, b) => b.stake - a.stake);
+
+        this.updateClientSeed({
+          seed: bet.payload.clientSeed,
+          userId: bet.payload.userId,
+        });
       }
 
-      this.updateClientSeed({
-        seed: bet.payload.clientSeed,
-        userId: bet.payload.userId,
+      // Emit roundInfo to all connected clients
+      io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_SUCCESSFUL_BETS, {
+        totalBetAmount: this.totalBetAmount,
+        topStakers: this.topStakers,
+        totalBets: this.activeBetsMap.size,
       });
     });
   }
@@ -138,37 +151,39 @@ class RoundStateManager {
    * Updates state for successfully processed cashouts
    */
   private handleProcessedCashouts(
-    successfulCashouts: (StagedCashout & { newAccountBalance: number })[]
+    processedCashouts: (StagedCashout & { newAccountBalance: number })[]
   ) {
-    if (!successfulCashouts) return;
+    const topStakerIndexMap = new Map<string, number>();
+    this.topStakers.forEach((staker, index) =>
+      topStakerIndexMap.set(staker.betId, index)
+    );
 
-    const indexMap = new Map<string, number>();
-    this.topStakers.forEach((bet, i) => indexMap.set(bet.betId, i));
+    let hasChanges = false;
 
-    let modified = false;
+    processedCashouts.forEach((cashout) => {
+      const activeBetEntry = this.activeBetsMap.get(cashout.betId);
 
-    successfulCashouts.forEach((cashout) => {
-      const betRecord = this.activeBetsMap.get(cashout.betId);
-      if (betRecord) {
-        betRecord.bet.status = BetStatus.WON;
-        betRecord.bet.payout = cashout.payout;
-        betRecord.bet.cashoutMultiplier = cashout.cashoutMultiplier;
+      if (activeBetEntry) {
+        activeBetEntry.bet.status = BetStatus.WON;
+        activeBetEntry.bet.payout = cashout.payout;
+        activeBetEntry.bet.cashoutMultiplier = cashout.cashoutMultiplier;
       }
 
-      const stakerIndex = indexMap.get(cashout.betId);
-      if (stakerIndex !== undefined) {
-        const topStaker = this.topStakers[stakerIndex];
-        topStaker.payout = cashout.payout;
-        topStaker.cashoutMultiplier = cashout.cashoutMultiplier;
-        modified = true;
+      const stakerIdx = topStakerIndexMap.get(cashout.betId);
+      if (stakerIdx !== undefined) {
+        const staker = this.topStakers[stakerIdx];
+        staker.payout = cashout.payout;
+        staker.cashoutMultiplier = cashout.cashoutMultiplier;
+        hasChanges = true;
       }
     });
 
-    if (modified) {
-      io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_TOP_STAKERS, {
-        topStakers: this.topStakers,
-      });
-    }
+    this.totalCashouts += processedCashouts.length;
+
+    const responseData = hasChanges
+      ? { topStakers: this.topStakers, totalCashouts: this.totalCashouts }
+      : { totalCashouts: this.totalCashouts };
+    io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_SUCCESSFUL_CASHOUTS, responseData);
   }
 
   // Setters
@@ -198,13 +213,19 @@ class RoundStateManager {
   /**
    * Resets round state for a new game
    */
-  public reset(): void {
-    this.gamePhase = GamePhase.PREPARING;
+  public reset() {
+    this.gamePhase = GamePhase.IDLE;
+    this.clientSeedDetails = [];
+    this.clientSeed = "";
     this.currentMultiplier = 1;
-    this.roundId = uuidv4();
     this.provablyFairOutcome = null;
+    this.totalBetAmount = 0;
     this.activeBetsMap.clear();
     this.topStakers = [];
+    this.totalCashouts = 0;
+    this.roundId = uuidv4();
+
+    return this.roundId;
   }
 }
 

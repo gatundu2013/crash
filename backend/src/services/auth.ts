@@ -10,6 +10,7 @@ import { generateAuthTokens } from "../utils/authTokens";
 import { AuthError } from "../utils/errors/authError";
 import { formatUserData } from "../utils/userFormatter";
 import { AccountStatus } from "../types/user.types";
+import { v4 as uuidv4 } from "uuid";
 
 export async function registerUserService(params: RegisterRequest) {
   const { phoneNumber, username, password, agreeToTerms } = params;
@@ -39,13 +40,14 @@ export async function registerUserService(params: RegisterRequest) {
     phoneNumber,
     password: hashedPassword,
     agreeToTerms,
+    userId: uuidv4(),
   });
 
   const authTokens = generateAuthTokens({
     role: newUser.role,
     phoneNumber: newUser.phoneNumber,
     username: newUser.username,
-    userId: newUser._id.toString(),
+    userId: newUser.userId,
   });
 
   const userData = formatUserData(newUser);
@@ -78,16 +80,18 @@ export async function loginUserService(params: LoginRequest) {
     role: user.role,
     phoneNumber: user.phoneNumber,
     username: user.username,
-    userId: user._id.toString(),
+    userId: user.userId,
   });
 
   const userData = formatUserData(user);
+
+  console.log(userData);
 
   return { authTokens, userData };
 }
 
 export async function getUserAuthStatus(userId: string) {
-  const user = await User.findOne({ _id: userId }).lean();
+  const user = await User.findOne({ userId: userId }).lean();
 
   if (user?.accountStatus !== AccountStatus.ACTIVE) {
     throw new AuthError({

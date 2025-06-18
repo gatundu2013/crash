@@ -1,43 +1,43 @@
-import { Socket } from "socket.io";
 import {
   BetStatus,
-  CashoutPayload,
+  GroupedUserCashouts,
+  StageCashoutParams,
   StagedCashout,
   userAccountBalance,
 } from "../../types/bet.types";
 import { roundStateManager } from "../game/roundStateManager";
 import { SOCKET_EVENTS } from "../../config/socketEvents.config";
-import { GamePhase } from "../../types/game.types";
 import User from "../../models/user.model";
-import BetHistory from "../../models/betHistory.model";
+import BetHistory, { BetHistoryDoc } from "../../models/betHistory.model";
 import mongoose, { AnyBulkWriteOperation } from "mongoose";
-import { eventBus, EVENT_NAMES } from "../eventBus";
+import { cashoutSchema } from "../../validations/betting.validation";
+import { CashoutError } from "../../utils/errors/cashoutError";
+import { AppError } from "../../utils/errors/appError";
+import { MongoError } from "mongodb";
+import { EVENT_NAMES, eventBus } from "../eventBus";
 
 /**
- * CashoutManager handles high-volume cashout processing using batch operations.
- * Similar to BettingManager but handles cashout requests instead of new bets.
+ * Handles all player cashouts for the game (singleton).
+ *
+ * - Stages, batches, and processes cashouts in transactions.
+ * - Notifies clients and updates game state.
+ *
+ * All cashouts must finish before the next round starts.
  */
 class CashoutManager {
-  // No longer extends EventEmitter
   private static instance: CashoutManager;
 
   private readonly config = {
-    MAX_CASHOUTS_PER_USER: 4,
-    MAX_BATCH_SIZE: 10,
-    BATCH_PROCESSING_INTERVAL: 500, // 500ms - faster for cashouts
+    MAX_BATCH_SIZE: 1000,
+    DEBOUNCE_TIME_MS: 500,
+    MAX_RETRIES: 3,
+    BASE_BACKOFF_MS: 100,
   };
 
-  /**
-   * Storage for staged cashouts awaiting processing.
-   * Key: betId, Value: StagedCashout with all necessary data
-   */
   private stagedCashouts: Map<string, StagedCashout> = new Map();
-
-  /** Prevents concurrent batch processing */
   private isProcessing = false;
-
-  /** Interval for batch processing fallback */
-  private batchProcessingInterval: NodeJS.Timeout | null = null;
+  private debounceTimerId: NodeJS.Timeout | null = null;
+  private isCashoutWindowOpen = false;
 
   private constructor() {}
 
@@ -49,162 +49,303 @@ class CashoutManager {
   }
 
   /**
-   * Stages a cashout request after validation
+   * Validates and stages a user's cashout request for batch processing.
    */
-  public stageCashout(params: CashoutPayload, socket: Socket): void {
-    const roundState = roundStateManager.getState();
-    const cashoutMultiplier = roundState.currentMultiplier; //snapShot currentMultiplier
-
-    // Validation 1: Game must be running
-    if (roundState.gamePhase !== GamePhase.RUNNING) {
-      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_ERROR, {
-        message: "Too late, game crashed",
-      });
-      return;
-    }
-
-    // Validation 2: Bet must exist
-    const activeBet = roundState.betsMap.get(params.betId);
-    if (!activeBet) {
-      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_ERROR, {
-        message: "Bet not found",
-      });
-      return;
-    }
-
-    // Validation 3: Bet must not be already settled
-    if (activeBet.bet.status === BetStatus.WON) {
-      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_ERROR, {
-        message: "Bet already settled",
-      });
-      return;
-    }
-
-    // Validation 4: Check if already staged
-    if (this.stagedCashouts.has(params.betId)) {
-      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_ERROR, {
-        message: "Cashout already in progress",
-      });
-      return;
-    }
-
-    // Stage the cashout with all necessary data
-    this.stagedCashouts.set(params.betId, {
-      betId: params.betId,
-      userId: activeBet.bet.userId,
-      stake: activeBet.bet.stake,
-      cashoutMultiplier,
-      payout: cashoutMultiplier * activeBet.bet.stake, //payout for the bet
-      socket,
-    });
-
-    // Trigger immediate processing
-    this.processBatch().catch(console.error);
-  }
-
-  /**
-   * Main batch processing function for cashouts
-   */
-  public async processBatch(): Promise<string[]> {
-    if (this.isProcessing || this.stagedCashouts.size === 0) {
-      return [];
-    }
-
-    this.isProcessing = true;
-    const batchStart = Date.now();
-
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+  public stageCashout({ payload, socket }: StageCashoutParams): void {
     try {
-      // Step 1: Extract batch and group by user
-      const { batch, groupedUserCashouts } = this.extractAndGroupCashouts();
+      // Capture the multiplier at the moment of cashout request to
+      // ensure the payout matches the player's action time.
+      let cashoutMultiplier = roundStateManager.getState().currentMultiplier;
 
-      // Step 2: Fetch user account balances (for validation/auditing)
-      const userIds = Array.from(groupedUserCashouts.keys());
-      const userAccountBalances = await User.find(
-        { _id: { $in: userIds } },
-        { accountBalance: 1, _id: 1 }
-      ).session(session);
-
-      if (userAccountBalances.length === 0) {
-        await session.abortTransaction();
-        session.endSession();
-        this.isProcessing = false;
-        return [];
+      // 1. Validate cashout payload.
+      const { error } = cashoutSchema.validate(payload);
+      if (error) {
+        throw new CashoutError({
+          description: "An error occured",
+          httpCode: 400,
+          isOperational: true,
+          internalMessage: error.message,
+        });
       }
 
-      // Step 3: Prepare database operations
-      const { successfulCashouts, failedCashouts, dbOperations } =
-        this.prepareCashoutOperations(groupedUserCashouts, userAccountBalances);
-
-      if (dbOperations.length === 0) {
-        this.notifyFailedCashouts(failedCashouts, "No valid cashouts");
-        await session.abortTransaction();
-        session.endSession();
-        this.isProcessing = false;
-        return [];
+      // 2. Ensure cashout window is open.
+      if (!this.isCashoutWindowOpen) {
+        throw new CashoutError({
+          description: "Cashout window is closed",
+          httpCode: 400,
+          isOperational: true,
+          internalMessage: "Attempted cashout outside cashout window",
+        });
       }
 
-      // Step 4: Execute database operations
-      await this.executeCashoutOperations(dbOperations, session);
+      // 3. Prevent duplicate cashout requests for the same bet ID.
+      if (this.stagedCashouts.has(payload.betId)) {
+        throw new CashoutError({
+          description: "Cashout already in progress",
+          httpCode: 400,
+          isOperational: true,
+          internalMessage: "Duplicate cashout attempt detected",
+        });
+      }
 
-      // Commit transaction
-      await session.commitTransaction();
-      session.endSession();
+      // 4. Verify that the bet exists in the current round bets.
+      const activeBet = roundStateManager.getState().betsMap.get(payload.betId);
+      if (!activeBet) {
+        throw new CashoutError({
+          description: "Bet not found",
+          httpCode: 400,
+          isOperational: true,
+          internalMessage: "No active bet found for given betId",
+        });
+      }
 
-      // Step 5: Notify clients and update game state
-      this.notifyCashoutResults(successfulCashouts, failedCashouts);
-      this.updateRoundState(successfulCashouts);
+      // 5. Reject cashout - Bet is already settled.
+      if (activeBet.bet.status === BetStatus.WON) {
+        throw new CashoutError({
+          description: "Bet already settled",
+          httpCode: 400,
+          isOperational: true,
+          internalMessage: "Attempted cashout on a settled bet",
+        });
+      }
 
-      // Step 6: Log performance
-      this.logBatchTiming(
-        batchStart,
-        batch.length,
-        successfulCashouts.length,
-        failedCashouts.length
-      );
+      // 6. Calculate payout
+      cashoutMultiplier = +cashoutMultiplier.toFixed(2);
+      const payout = +(cashoutMultiplier * activeBet.bet.stake).toFixed(2);
 
-      eventBus.emit(EVENT_NAMES.CASHOUTS_PROCESSED, successfulCashouts);
+      // 7. Cashout is valid - Stage.
+      this.stagedCashouts.set(payload.betId, {
+        betId: payload.betId,
+        userId: activeBet.bet.userId,
+        stake: activeBet.bet.stake,
+        cashoutMultiplier,
+        payout,
+        socket, // Store the socket for direct notification later.
+      });
 
-      return successfulCashouts.map((cashout) => cashout.betId);
-    } catch (error) {
-      console.error("[CashoutManager] Error processing batch:", error);
-      await session.abortTransaction();
-      session.endSession();
-      return [];
-    } finally {
-      this.isProcessing = false;
-      // Schedule next processing cycle
-      setImmediate(() => this.processBatch().catch(console.error));
+      // 8. Start the batch processor if it's not already scheduled or running.
+      this.scheduleNextBatch();
+    } catch (err) {
+      console.error("Cashout Error:", err);
+      const message = err instanceof AppError ? err.message : "Cashout Failed";
+      socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_ERROR(payload.betId), {
+        message,
+      });
     }
   }
 
   /**
-   * Extract cashouts from staging and group by user
+   * Orchestrates the processing of a batch of staged cashouts with proper retry logic.
+   * This function is the core of the batch processing logic, handling everything.
+   * It is designed to run sequentially and will not execute if another batch is already being processed.
    */
-  private extractAndGroupCashouts() {
+  public async processBatch(): Promise<void> {
+    if (this.isProcessing) {
+      console.warn("[CashoutManager]: Another batch is already processing");
+      return;
+    }
+
+    if (this.stagedCashouts.size === 0) {
+      console.warn("[CashoutManager]: No cashouts to process");
+      return;
+    }
+
+    // Set the processing flag to prevent concurrent batch processing.
+    this.isProcessing = true;
+
+    // Clear any pending debounce timer since we're processing now
+    if (this.debounceTimerId) {
+      clearTimeout(this.debounceTimerId);
+      this.debounceTimerId = null;
+    }
+
+    // Used to send notification to users of the batch if batch processing fails
+    let batch: StagedCashout[] = [];
+
+    for (let attempt = 1; attempt <= this.config.MAX_RETRIES; attempt++) {
+      let session: mongoose.ClientSession | null = null;
+
+      try {
+        // Record the start time of the batch processing.
+        const batchStart = Date.now();
+
+        // Start transaction.
+        session = await mongoose.startSession();
+        session.startTransaction();
+
+        // Extract batch from the staging map and group them by user ID.
+        const { batch: btc, groupedUserCashouts } =
+          this.extractAndGroupCashouts();
+        batch = btc;
+
+        // Fetch the account balances for the users involved in the batch.
+        const userIds = Array.from(groupedUserCashouts.keys());
+        const userAccountBalances = await User.find(
+          { userId: { $in: userIds } },
+          { accountBalance: 1, userId: 1 }
+        ).session(session);
+
+        // Extra check: Should never happen, but protects against rare
+        // data issues (e.g. missing users). Abort if no balances found.
+        if (userAccountBalances.length === 0) {
+          await session.abortTransaction();
+          console.warn(
+            "[CashoutManager]: No user account balances found for batch"
+          );
+          return;
+        }
+
+        // Prepare the database operations for the batch of cashouts.
+        const { successfulCashouts, betHistoryUpdateOps, balanceUpdateOps } =
+          this.prepareCashoutDbOperations({
+            groupedUserCashouts,
+            userAccountBalances,
+          });
+
+        // Extra check: Shouldn't happen, but avoids processing empty
+        // batches. Abort if no balance updates.
+        if (balanceUpdateOps.length === 0) {
+          await session.abortTransaction();
+          console.warn(
+            "[CashoutManager]: No balance updates required for batch"
+          );
+          return;
+        }
+
+        // Execute the prepared database operations within the transaction.
+        await this.executeCashoutDbOperation({
+          balanceUpdateOps,
+          betHistoryUpdateOps,
+          session,
+        });
+
+        // Commit the transaction.
+        await session.commitTransaction();
+
+        // Success! Notify clients and update state
+        this.notifySuccessfulCashouts({ successfulCashouts });
+        eventBus.emit(EVENT_NAMES.CASHOUTS_PROCESSED, successfulCashouts);
+
+        this.logBatchTiming({
+          batchStart,
+          batchSize: batch.length,
+          successCount: successfulCashouts.length,
+          failureCount: 0,
+        });
+
+        console.log(
+          `[CashoutManager]: Successfully processed batch of ${batch.length} cashouts on attempt ${attempt}`
+        );
+
+        // Success - break out of retry loop
+        break;
+      } catch (error) {
+        console.error(
+          `[CashoutManager] Error on attempt ${attempt}/${this.config.MAX_RETRIES}:`,
+          error
+        );
+
+        // Abort transaction if it exists
+        if (session) {
+          try {
+            await session.abortTransaction();
+          } catch (abortError) {
+            console.error(
+              "[CashoutManager] Error aborting transaction:",
+              abortError
+            );
+          }
+        }
+
+        // Check if this is a retryable WriteConflict error
+        const isWriteConflict =
+          error instanceof MongoError && error.code === 112;
+
+        if (isWriteConflict && attempt < this.config.MAX_RETRIES) {
+          console.log(
+            `[CashoutManager] WriteConflict detected, retrying attempt ${
+              attempt + 1
+            }/${this.config.MAX_RETRIES}`
+          );
+
+          // Exponential backoff: 100ms, 200ms, 400ms
+          const backoffDelay =
+            this.config.BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
+          await new Promise((resolve) => setTimeout(resolve, backoffDelay));
+
+          // Continue to next retry attempt
+          continue;
+        }
+
+        // Non-retryable error or max retries exceeded
+        console.error(
+          `[CashoutManager] Failed after ${attempt} attempts. Error:`,
+          error
+        );
+
+        // Notify users about the failure
+        this.notifyFailedCashouts({
+          failedCashouts: batch,
+          reason: "An errors occured.",
+        });
+
+        break; // Exit retry loop
+      } finally {
+        // Always clean up session
+        if (session) {
+          try {
+            await session.endSession();
+          } catch (endError) {
+            console.error("[CashoutManager] Error ending session:", endError);
+          }
+        }
+      }
+    }
+
+    // Clean up processed cashouts (remove from staging map)
+    batch.forEach((cashout) => this.stagedCashouts.delete(cashout.betId));
+
+    // Reset processing flag
+    this.isProcessing = false;
+
+    // Schedule next batch if there are more cashouts waiting
+    this.scheduleNextBatch();
+  }
+
+  /**
+   * Schedules the next batch processing if there are pending cashouts
+   */
+  private scheduleNextBatch(): void {
+    if (
+      this.stagedCashouts.size > 0 &&
+      !this.debounceTimerId &&
+      !this.isProcessing
+    ) {
+      this.debounceTimerId = setTimeout(() => {
+        this.processBatch().catch(console.error);
+      }, this.config.DEBOUNCE_TIME_MS);
+    }
+  }
+
+  /**
+   * Extracts batch from the queue and groups cashouts by user ID.
+   * This optimizes database operations by allowing updates to be consolidated per user.
+   */
+  private extractAndGroupCashouts(): {
+    batch: StagedCashout[];
+    groupedUserCashouts: Map<string, GroupedUserCashouts>;
+  } {
+    // Take a chunk of cashouts from staged cashouts.
     const batch = Array.from(this.stagedCashouts.values()).slice(
       0,
       this.config.MAX_BATCH_SIZE
     );
 
-    // Remove from staging
-    batch.forEach((cashout) => {
-      this.stagedCashouts.delete(cashout.betId);
-    });
-
-    // Group by user
-    const groupedUserCashouts = new Map<
-      string,
-      {
-        cashouts: StagedCashout[];
-        totalPayout: number;
-      }
-    >();
-
+    // Group similar users together to optimize database operations.
+    const groupedUserCashouts = new Map<string, GroupedUserCashouts>();
     batch.forEach((cashout) => {
       const existing = groupedUserCashouts.get(cashout.userId);
+
       if (existing) {
         existing.cashouts.push(cashout);
         existing.totalPayout += cashout.payout;
@@ -220,219 +361,201 @@ class CashoutManager {
   }
 
   /**
-   * Prepare database operations for cashouts
+   * Prepares database bulk write operations for batch
    */
-  private prepareCashoutOperations(
-    groupedUserCashouts: Map<
-      string,
-      { cashouts: StagedCashout[]; totalPayout: number }
-    >,
-    userAccountBalances: userAccountBalance[]
-  ) {
-    const dbOperations: AnyBulkWriteOperation[] = [];
+  private prepareCashoutDbOperations({
+    groupedUserCashouts,
+    userAccountBalances,
+  }: PrepareCashoutOperationsParams): {
+    successfulCashouts: (StagedCashout & { newAccountBalance: number })[];
+    betHistoryUpdateOps: AnyBulkWriteOperation<BetHistoryDoc>[];
+    balanceUpdateOps: AnyBulkWriteOperation[];
+  } {
+    const balanceUpdateOps: AnyBulkWriteOperation[] = [];
+    const betHistoryUpdateOps: AnyBulkWriteOperation<BetHistoryDoc>[] = [];
     const successfulCashouts: (StagedCashout & {
       newAccountBalance: number;
     })[] = [];
-    const failedCashouts: StagedCashout[] = [];
 
-    userAccountBalances.forEach((user) => {
-      const userId = user._id.toString();
-      const cashoutDetails = groupedUserCashouts.get(userId);
+    // Create a Map for O(1) lookup of user balances.
+    const userAccountBalanceMap = new Map<string, number>(
+      userAccountBalances.map((u) => [u.userId, u.accountBalance])
+    );
 
-      if (cashoutDetails) {
-        // Prepare balance update (add cashout amount)
-        dbOperations.push({
+    // Iterate over each user's grouped cashouts to prepare DB operations.
+    groupedUserCashouts.forEach((userCashouts, userId) => {
+      const accountBalance = userAccountBalanceMap.get(userId);
+
+      if (accountBalance !== undefined) {
+        // Prepare a single bulk operation to increment the user's balance by their total payout.
+        balanceUpdateOps.push({
           updateOne: {
-            filter: { _id: user._id },
-            update: { $inc: { accountBalance: cashoutDetails.totalPayout } },
+            filter: { userId },
+            update: { $inc: { accountBalance: userCashouts.totalPayout } },
           },
         });
 
-        // Prepare bet history updates
-        cashoutDetails.cashouts.forEach((cashout) => {
-          dbOperations.push({
+        // Calculate the user's new account balance for notification purposes.
+        const newAccountBalance = accountBalance + userCashouts.totalPayout;
+
+        // For each individual cashout, prepare an operation to update its status in the bet history.
+        userCashouts.cashouts.forEach((cashout) => {
+          betHistoryUpdateOps.push({
             updateOne: {
               filter: { betId: cashout.betId, status: BetStatus.PENDING },
               update: {
                 $set: {
-                  status: BetStatus.WON,
                   payout: cashout.payout,
                   cashoutMultiplier: cashout.cashoutMultiplier,
+                  status: BetStatus.WON,
                 },
               },
             },
           });
-        });
 
-        // Calculate new balance for notifications
-        let runningBalance = user.accountBalance;
-        const enhancedCashouts = cashoutDetails.cashouts.map((cashout) => {
-          runningBalance += cashout.payout;
-          return {
-            ...cashout,
-            newAccountBalance: runningBalance,
-          };
+          // Add the processed cashout to the list of successful cashouts, annotated with the new balance.
+          successfulCashouts.push({ ...cashout, newAccountBalance });
         });
-
-        successfulCashouts.push(...enhancedCashouts);
       }
     });
 
-    return { successfulCashouts, failedCashouts, dbOperations };
+    return { successfulCashouts, betHistoryUpdateOps, balanceUpdateOps };
   }
 
   /**
-   * Execute database operations
+   * Executes prepared bulk write operations within a database transaction.
    */
-  private async executeCashoutOperations(
-    dbOperations: AnyBulkWriteOperation[],
-    session: mongoose.ClientSession
-  ): Promise<void> {
-    // Execute user balance updates
-    const userUpdates = dbOperations.filter(
-      (op) => "updateOne" in op && op.updateOne.update.$inc
-    );
-
-    if (userUpdates.length > 0) {
-      await User.bulkWrite(userUpdates, { session });
+  private async executeCashoutDbOperation({
+    balanceUpdateOps,
+    betHistoryUpdateOps,
+    session,
+  }: ExecuteCashoutOperationsParams): Promise<void> {
+    // Execute the bulk write operation to update all user balances at once.
+    if (balanceUpdateOps.length > 0) {
+      await User.bulkWrite(balanceUpdateOps, { session });
     }
 
-    // Execute bet history updates
-    const betUpdates = dbOperations.filter(
-      (op) => "updateOne" in op && op.updateOne.update.$set
-    );
-    if (betUpdates.length > 0) {
-      await BetHistory.bulkWrite(betUpdates, { session });
+    // Execute the bulk write operation to update all bet history documents at once.
+    if (betHistoryUpdateOps.length > 0) {
+      await BetHistory.bulkWrite(betHistoryUpdateOps, { session });
     }
   }
 
   /**
-   * Notify clients of cashout results
+   * Notifies clients about the results of their successful cashout attempts.
    */
-  private notifyCashoutResults(
-    successfulCashouts: (StagedCashout & { newAccountBalance: number })[],
-    failedCashouts: StagedCashout[]
-  ): void {
+  private notifySuccessfulCashouts({
+    successfulCashouts,
+  }: NotifyCashoutResultsParams): void {
+    // Notify each user whose cashout was successful.
     successfulCashouts.forEach((cashout) => {
       if (cashout.socket) {
-        cashout.socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_SUCCESS, {
-          message: "Cashout successful",
-          betId: cashout.betId,
-          payout: cashout.payout,
-          multiplier: cashout.cashoutMultiplier,
-          accountBalance: cashout.newAccountBalance,
-        });
+        cashout.socket.emit(
+          SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_SUCCESS(cashout.betId),
+          {
+            payout: cashout.payout,
+            multiplier: cashout.cashoutMultiplier,
+            newAccountBalance: cashout.newAccountBalance,
+          }
+        );
       }
     });
-
-    this.notifyFailedCashouts(failedCashouts, "Cashout failed");
   }
 
   /**
-   * Notify failed cashouts
+   * Sends failure notifications to individual clients.
    */
-  private notifyFailedCashouts(
-    failedCashouts: StagedCashout[],
-    reason: string
-  ): void {
+  private notifyFailedCashouts({
+    failedCashouts,
+    reason,
+  }: NotifyFailedCashoutsParams): void {
+    // Iterate through the list of failed cashouts and send a specific error message.
     failedCashouts.forEach((cashout) => {
       if (cashout.socket) {
-        cashout.socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_ERROR, {
-          message: reason,
-          betId: cashout.betId,
-        });
+        cashout.socket.emit(
+          SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_ERROR(cashout.betId),
+          {
+            message: reason,
+          }
+        );
       }
     });
   }
 
   /**
-   * Update round state to mark bets as cashed out
+   * Logs performance metrics for a processed batch.
    */
-  private updateRoundState(successfulCashouts: StagedCashout[]): void {
-    const roundState = roundStateManager.getState();
-
-    successfulCashouts.forEach((cashout) => {
-      const bet = roundState.betsMap.get(cashout.betId);
-      if (bet) {
-        bet.bet.status = BetStatus.WON;
-        bet.bet.payout = cashout.payout;
-        bet.bet.cashoutMultiplier = cashout.cashoutMultiplier;
-      }
-    });
-  }
-
-  /**
-   * Start batch processing with interval
-   */
-  public startProcessing(): void {
-    if (this.batchProcessingInterval) {
-      clearInterval(this.batchProcessingInterval);
-    }
-
-    this.batchProcessingInterval = setInterval(
-      () => this.processBatch().catch(console.error),
-      this.config.BATCH_PROCESSING_INTERVAL
-    );
-  }
-
-  /**
-   * Stop batch processing
-   */
-  public stopProcessing(): void {
-    if (this.batchProcessingInterval) {
-      clearInterval(this.batchProcessingInterval);
-      this.batchProcessingInterval = null;
-    }
-  }
-
-  /**
-   * Clear all staged cashouts (when game ends)
-   */
-  public clearStagedCashouts(reason = "Game ended"): void {
-    const stagedCashouts = Array.from(this.stagedCashouts.values());
-    this.stagedCashouts.clear();
-
-    this.notifyFailedCashouts(stagedCashouts, reason);
-  }
-
-  /**
-   * Log batch performance
-   */
-  private logBatchTiming(
-    batchStart: number,
-    totalCashouts: number,
-    successful: number,
-    failed: number
-  ): void {
-    const durationMs = Date.now() - batchStart;
-    const durationSeconds = (durationMs / 1000).toFixed(2);
-
+  private logBatchTiming({
+    batchStart,
+    batchSize,
+    successCount,
+    failureCount,
+  }: LogBatchTimingParams): void {
+    // Calculate the total processing time for the batch.
+    const batchEnd = Date.now();
+    // Log detailed performance metrics to the console for monitoring.
     console.log(
-      `[CashoutBatch] Processed ${totalCashouts} cashouts in ${durationMs}ms (${durationSeconds}s) | Success: ${successful}, Failed: ${failed}`
+      `[CashoutManager] Batch processed in ${
+        batchEnd - batchStart
+      }ms. Size: ${batchSize}, Success: ${successCount}, Failed: ${failureCount}`
     );
   }
 
-  /**
-   * Get current statistics
-   */
-  public getState() {
-    return {
-      stagedCashoutsSize: this.stagedCashouts.size,
-      isProcessing: this.isProcessing,
-      config: this.config,
-    };
+  public openCashoutWindow(): void {
+    this.isCashoutWindowOpen = true;
+    console.log("[CashoutManager] Cashout window opened");
+  }
+
+  public closeCashoutWindow(): void {
+    this.isCashoutWindowOpen = false;
+    console.log("[CashoutManager] Cashout window closed");
   }
 
   /**
-   * Graceful shutdown
+   * Retrieves the current operational state of the manager.
+   * Useful for monitoring and debugging.
    */
-  public async shutdown(): Promise<void> {
-    this.stopProcessing();
-
-    if (this.stagedCashouts.size > 0) {
-      await this.processBatch();
-    }
+  public getState(): {
+    stagedCount: number;
+    isProcessing: boolean;
+    isCashoutWindowOpen: boolean;
+    hasScheduledBatch: boolean;
+  } {
+    return {
+      stagedCount: this.stagedCashouts.size,
+      isProcessing: this.isProcessing,
+      isCashoutWindowOpen: this.isCashoutWindowOpen,
+      hasScheduledBatch: this.debounceTimerId !== null,
+    };
   }
 }
 
 export const cashoutManager = CashoutManager.getInstance();
+
+// Interfaces
+interface PrepareCashoutOperationsParams {
+  groupedUserCashouts: Map<string, GroupedUserCashouts>;
+  userAccountBalances: userAccountBalance[];
+}
+
+interface ExecuteCashoutOperationsParams {
+  balanceUpdateOps: AnyBulkWriteOperation[];
+  betHistoryUpdateOps: AnyBulkWriteOperation<BetHistoryDoc>[];
+  session: mongoose.ClientSession;
+}
+
+interface NotifyCashoutResultsParams {
+  successfulCashouts: (StagedCashout & { newAccountBalance: number })[];
+}
+
+interface NotifyFailedCashoutsParams {
+  failedCashouts: StagedCashout[];
+  reason: string;
+}
+
+interface LogBatchTimingParams {
+  batchStart: number;
+  batchSize: number;
+  successCount: number;
+  failureCount: number;
+}

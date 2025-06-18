@@ -16,7 +16,7 @@ import BetHistory from "../../models/betHistory.model";
 import { AccountStatus } from "../../types/user.types";
 import { GameError } from "../../utils/errors/gameError";
 import { EVENT_NAMES, eventBus } from "../eventBus";
-import bettingSchema from "../../validations/bet/betting.validation";
+import { bettingSchema } from "../../validations/betting.validation";
 import { BettingError } from "../../utils/errors/bettingError";
 import { AppError } from "../../utils/errors/appError";
 
@@ -134,7 +134,7 @@ class BettingManager {
 
       // The condition ensures we only start this timer if:
       // 1. The processing loop is not already running (`!this.isProcessing`).
-      // 2. A start-up timer is not already pending (`!this.debounceTimerId`).
+      // 2. A start-up timer is not already scheduled (`!this.debounceTimerId`).
       if (!this.isProcessing && !this.debounceTimerId) {
         this.debounceTimerId = setTimeout(() => {
           this.processBatch().catch(console.error);

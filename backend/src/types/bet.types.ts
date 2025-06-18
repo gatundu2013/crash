@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { Socket } from "socket.io";
 
 export enum BetStatus {
@@ -23,6 +22,7 @@ export interface BettingPayload {
   userId: string;
   clientSeed: string;
   username: string;
+  storeId: string; // used for differentiating button(Prevents cross-talk in events)
 }
 
 // ==================================
@@ -40,8 +40,13 @@ export interface GroupedUserBets {
   bets: StagedBet[];
 }
 export interface userAccountBalance {
-  _id: mongoose.Types.ObjectId;
+  userId: string;
   accountBalance: number;
+}
+export interface FailedBetInfo {
+  socket: Socket;
+  storeId: string;
+  reason: string;
 }
 
 // ==============================
@@ -68,4 +73,14 @@ export interface StagedCashout extends CashoutPayload {
   stake: number;
   socket: Socket;
   payout: number;
+}
+
+export interface StageCashoutParams {
+  payload: CashoutPayload;
+  socket: Socket;
+}
+
+export interface GroupedUserCashouts {
+  cashouts: StagedCashout[];
+  totalPayout: number;
 }

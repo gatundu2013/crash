@@ -9,5 +9,6 @@ export function formatUserData(user: UserI) {
     username: user.username,
     accountBalance: user.accountBalance,
     avatar: user.avatar,
+    userId: user.userId,
   };
 }
