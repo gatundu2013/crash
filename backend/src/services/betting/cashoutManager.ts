@@ -55,7 +55,7 @@ class CashoutManager {
    */
   private readonly config = {
     MAX_BATCH_SIZE: 1000, // Maximum number of cashouts to process in a single batch
-    DEBOUNCE_TIME_MS: 2000, // Delay to allow cashout accumulation before processing
+    DEBOUNCE_TIME_MS: 500, // Delay to allow cashout accumulation before processing
     MAX_RETRIES: 3, // Maximum retry attempts for failed database transactions
     BASE_BACKOFF_MS: 100, // Base delay for exponential backoff retry strategy
   } as const;
@@ -699,6 +699,20 @@ class CashoutManager {
   /**
    * Logs detailed performance metrics for a processed cashout batch.
    */
+  /**
+   * Logs comprehensive performance metrics and statistics for cashout batch processing operations.
+   *
+   * This method provides essential monitoring data for:
+   * - Performance analysis and optimization
+   * - System capacity planning
+   * - Debugging and troubleshooting
+   *
+   * ## Logged Metrics:
+   * - Processing Duration: Time taken in milliseconds/seconds
+   * - Throughput: Total number of cashouts processed in the batch
+   * - Success Rate: Count of successfully processed vs failed cashouts
+   * - Performance Indicators: Processing rate (cashouts per second) for batch
+   */
   private logBatchTiming({
     batchStart,
     batchSize,
@@ -707,11 +721,30 @@ class CashoutManager {
   }: LogBatchTimingParams): void {
     const batchEnd = Date.now();
     const durationMs = batchEnd - batchStart;
-    const throughput =
+    const durationSeconds = (durationMs / 1000).toFixed(2);
+    const cashoutsPerSecond =
       batchSize > 0 ? (batchSize / (durationMs / 1000)).toFixed(2) : "0";
+    const successRate =
+      batchSize > 0 ? ((successCount / batchSize) * 100).toFixed(1) : "0";
+
     console.info(
-      `[CashoutManager] Batch timing: durationMs=${durationMs}, batchSize=${batchSize}, successCount=${successCount}, failureCount=${failureCount}, throughput=${throughput} cashouts/sec`
+      `[CashoutManager] Batch Complete: ${batchSize} cashouts processed in ${durationMs}ms (${durationSeconds}s) | ` +
+        `Success: ${successCount}, Failed: ${failureCount} | ` +
+        `Rate: ${cashoutsPerSecond} cashouts/sec | Success Rate: ${successRate}%`
     );
+
+    // Additional performance warnings for monitoring
+    if (durationMs > 1000) {
+      console.warn(
+        `[CashoutManager] PERFORMANCE WARNING: Batch processing took ${durationSeconds}s, consider optimizing.`
+      );
+    }
+
+    if (batchSize > 0 && successCount === 0) {
+      console.error(
+        `[CashoutManager] CRITICAL: All ${batchSize} cashouts in batch failed processing.`
+      );
+    }
   }
 
   public openCashoutWindow(): void {
