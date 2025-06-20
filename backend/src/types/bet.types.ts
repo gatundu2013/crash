@@ -1,10 +1,85 @@
+import mongoose, { AnyBulkWriteOperation } from "mongoose";
 import { Socket } from "socket.io";
+import { BetHistoryI } from "../models/betHistory.model";
+
+// ==============================
+//         ENUMS
+// ==============================
 
 export enum BetStatus {
   WON = "won",
   LOST = "lost",
   PENDING = "pending",
 }
+
+// ==============================
+//        COMMON TYPES
+// ==============================
+
+export interface UserAccountBalance {
+  userId: string;
+  accountBalance: number;
+}
+
+// ==============================
+//        BETTING SECTION
+// ==============================
+
+export interface BettingPayload {
+  stake: number;
+  autoCashoutMultiplier: number | null;
+  userId: string;
+  clientSeed: string;
+  username: string;
+  storeId: string; // Identifies which button/store triggered the bet
+}
+
+export interface StageBetParams {
+  payload: BettingPayload;
+  socket: Socket;
+}
+
+export interface StagedBet {
+  payload: BettingPayload & { betId: string };
+  socket: Socket;
+}
+
+export interface AcceptedBet extends StagedBet {
+  newAccountBalance: number;
+}
+
+export interface GroupedUserBets {
+  totalStake: number;
+  bets: StagedBet[];
+}
+
+export interface ValidateBetsParams {
+  groupedUserBets: Map<string, GroupedUserBets>;
+  userAccountBalances: UserAccountBalance[];
+}
+
+export interface ExecuteDatabaseOperationsParams {
+  balanceUpdateOps: AnyBulkWriteOperation[];
+  validatedBets: AcceptedBet[];
+  session: mongoose.ClientSession;
+}
+
+export interface FailedBetInfo {
+  socket: Socket;
+  storeId: string;
+  reason: string;
+}
+
+export interface BatchLogsParams {
+  batchStart: number;
+  batchSize: number;
+  successfulBetsCounts: number;
+  failedBetsCounts: number;
+}
+
+// ==============================
+//        IN-MEMORY BET STATE
+// ==============================
 
 export interface SingleBet {
   userId: string;
@@ -16,57 +91,29 @@ export interface SingleBet {
   status: BetStatus;
 }
 
-export interface BettingPayload {
-  stake: number;
-  autoCashoutMultiplier: number | null;
-  userId: string;
-  clientSeed: string;
-  username: string;
-  storeId: string; // used for differentiating button(Prevents cross-talk in events)
-}
-
-// ==================================
-//      BETTING MANAGER
-// ==================================
-export interface StagedBet {
-  payload: BettingPayload & { betId: string };
-  socket: Socket;
-}
-export interface AcceptedBet extends StagedBet {
-  newAccountBalance: number;
-}
-export interface GroupedUserBets {
-  totalStake: number;
-  bets: StagedBet[];
-}
-export interface userAccountBalance {
-  userId: string;
-  accountBalance: number;
-}
-export interface FailedBetInfo {
-  socket: Socket;
-  storeId: string;
-  reason: string;
-}
-
-// ==============================
-//      ROUND_STATE MANAGER
-//===============================
 export interface BetInMemory {
   bet: SingleBet;
   socket: Socket;
 }
+
 export interface TopStaker
   extends Omit<SingleBet, "userId" | "status" | "autoCashoutMultiplier"> {
   username: string;
 }
 
-// =============================
-//      CASHOUT MANAGER
-//==============================
+// ==============================
+//        CASHOUT SECTION
+// ==============================
+
 export interface CashoutPayload {
   betId: string;
 }
+
+export interface StageCashoutParams {
+  payload: CashoutPayload;
+  socket: Socket;
+}
+
 export interface StagedCashout extends CashoutPayload {
   userId: string;
   cashoutMultiplier: number;
@@ -75,12 +122,34 @@ export interface StagedCashout extends CashoutPayload {
   payout: number;
 }
 
-export interface StageCashoutParams {
-  payload: CashoutPayload;
-  socket: Socket;
-}
-
 export interface GroupedUserCashouts {
   cashouts: StagedCashout[];
   totalPayout: number;
+}
+
+export interface PrepareCashoutOperationsParams {
+  groupedUserCashouts: Map<string, GroupedUserCashouts>;
+  userAccountBalances: UserAccountBalance[];
+}
+
+export interface ExecuteCashoutOperationsParams {
+  balanceUpdateOps: AnyBulkWriteOperation[];
+  betHistoryUpdateOps: AnyBulkWriteOperation<BetHistoryI>[];
+  session: mongoose.ClientSession;
+}
+
+export interface NotifyCashoutResultsParams {
+  successfulCashouts: (StagedCashout & { newAccountBalance: number })[];
+}
+
+export interface NotifyFailedCashoutsParams {
+  failedCashouts: StagedCashout[];
+  reason: string;
+}
+
+export interface LogBatchTimingParams {
+  batchStart: number;
+  batchSize: number;
+  successCount: number;
+  failureCount: number;
 }

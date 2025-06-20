@@ -1,11 +1,13 @@
 import { Document, model, Schema } from "mongoose";
 import { SingleBet } from "../types/bet.types";
 
-export interface BetHistoryDoc extends SingleBet, Document {
+export interface BetHistoryI extends SingleBet {
   roundId: string;
   finalMultiplier: number | null;
   betId: string;
 }
+
+interface BetHistoryDoc extends BetHistoryI, Document {}
 
 const betHistorySchema = new Schema<BetHistoryDoc>(
   {

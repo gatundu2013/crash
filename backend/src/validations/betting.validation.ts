@@ -29,7 +29,7 @@ export const bettingSchema = Joi.object<BettingPayload, true>({
     "string.base": "User ID must be a string.",
   }),
 
-  clientSeed: Joi.string().required().allow("").messages({
+  clientSeed: Joi.string().required().allow(null).messages({
     "any.required": "Client seed is required.",
     "string.base": "Client seed must be a string.",
   }),
