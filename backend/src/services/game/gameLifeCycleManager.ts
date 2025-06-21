@@ -10,15 +10,17 @@ import { roundStateManager } from "./roundStateManager";
 const roundAnalyticsManager = new RoundAnalyticsManager();
 
 /**
- * GameLifeCycleManager
+ * GameLifeCycleManager -- Singleton
  * ====================
- * Controls the complete crash game round lifecycle in phases:
+ * Controls the game round life cycle:
  * 1. Betting phase — players place bets
- * 2. Preparing phase — generate crash point, wait for bet processing
- * 3. Running phase — multiplier rises, auto-cashouts happen
- * 4. End phase — bust uncashed bets, record results
+ * 2. Preparing phase — generates crash point, waits for processing bet
+ * 3. Running phase — multiplier rises, auto-cashouts happens
+ * 4. End phase — bust all uncashed bets,calculates house profit,updates round analytics
  *
- * Emits real-time updates via Socket.IO and ensures proper state handling.
+ *------ Cycle repeats------
+ *
+ * Emits real-time updates via Socket.IO.
  */
 class GameLifeCycleManager {
   private static instance: GameLifeCycleManager;
@@ -26,10 +28,8 @@ class GameLifeCycleManager {
 
   private readonly config = {
     bettingPhaseDurationSec: 5,
-    countdownIntervalMs: 100,
-    multiplierIntervalMs: 100,
-    endPhaseDelayMs: 2500,
-    processingCheckIntervalMs: 500,
+    countdownIntervalMs: 100, // counts down betting phase
+    multiplierCountUpIntervalMs: 100,
   } as const;
 
   private constructor() {}
@@ -72,7 +72,7 @@ class GameLifeCycleManager {
     const start = Date.now();
     let remaining = this.config.bettingPhaseDurationSec as number;
 
-    // Countdown loop with real-time updates
+    // Countdown
     while (remaining > 0) {
       const now = Date.now();
       const elapsed = (now - start) / 1000;
@@ -99,7 +99,7 @@ class GameLifeCycleManager {
       gamePhase: GamePhase.PREPARING,
     });
 
-    // Generate provably fair crash point
+    // Generate provably fair round results
     roundStateManager.generateProvablyFairOutcome();
     const { provablyFairOutcome } = roundStateManager.getState();
 
@@ -114,10 +114,10 @@ class GameLifeCycleManager {
       console.log(
         `[GameLifeCycleManager]: Waiting for bets -- ${betState.stagedBetsCount}`
       );
-      await this.sleep(this.config.processingCheckIntervalMs);
+      await this.sleep(500);
     }
 
-    // Save analytics if there are active bets
+    // Save round analytics if there are active bets
     const state = roundStateManager.getState();
     if (state.activeBets.size > 0) {
       await roundAnalyticsManager.saveCompleteRoundResultsWithRetries({
@@ -152,7 +152,7 @@ class GameLifeCycleManager {
       const increment = currentMultiplier * GAME_CONFIG.MULTIPLIER_GROWTH_RATE;
       const nextMultiplier = currentMultiplier + increment;
 
-      // Process auto-cashouts at current multiplier
+      // Process auto-cashout
       cashoutManager.autoCashout();
 
       // Check if we've reached the crash point
@@ -164,7 +164,7 @@ class GameLifeCycleManager {
         currentMultiplier: nextMultiplier,
       });
 
-      await this.sleep(this.config.multiplierIntervalMs);
+      await this.sleep(this.config.multiplierCountUpIntervalMs);
     }
   }
 
@@ -189,21 +189,22 @@ class GameLifeCycleManager {
       console.log(
         `[GameLifeCycleManager]: Waiting for cashouts -- ${cashoutState.stagedCount}`
       );
-      await this.sleep(this.config.processingCheckIntervalMs);
+      await this.sleep(500);
     }
 
-    // Bust all remaining uncashed bets
+    // Bust all remaining uncashed bets and calculate round profit
     if (roundStateManager.getState().activeBets.size > 0) {
-      await bettingManager.bustUncashedBets({
-        roundId: roundStateManager.getState().roundId!,
-        finalMultiplier: crashPoint,
+      const roundState = roundStateManager.getState();
+      await roundAnalyticsManager.finalizeRoundOutcome({
+        finalMultiplier: roundState.currentMultiplier,
+        roundId: roundState.roundId!,
+        totalBetAmount: roundState.totalBetAmount,
+        totalCashoutAmount: roundState.totalCashoutAmount,
       });
-
-      // TODO: calculate round profit
     }
 
-    // Brief pause to show final multiplier before next round
-    await this.sleep(this.config.endPhaseDelayMs);
+    // Brief pause for UI purposes -- show final multiplier before continuing
+    await this.sleep(2500);
   }
 
   private handleLifecycleError(err: unknown): void {
@@ -213,7 +214,6 @@ class GameLifeCycleManager {
         "An error occured on our end. Please wait while we resolve the issue.",
     });
 
-    // Log detailed error for investigation
     console.error("[GameLifeCycleManager]: CRITICAL ERROR - Game stopped", {
       error: err,
       timestamp: new Date().toISOString(),
@@ -225,7 +225,7 @@ class GameLifeCycleManager {
   }
 
   /**
-   * Stops the game loop gracefully
+   * manually stop the game loop
    */
   public stopGame(): void {
     this.isRunning = false;
