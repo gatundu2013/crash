@@ -3,6 +3,7 @@ export const SOCKET_EVENTS = {
     //game
     BROADCAST_SUCCESSFUL_BETS: "broadcastSuccessfulBets",
     BROADCAST_SUCCESSFUL_CASHOUTS: "broadSuccessfulCashouts",
+    BROADCAST_HASHED_SERVER_SEED: "broadcastHashedServerSeed",
 
     GAME_PHASE: {
       PREPARING: "game:preparing",
