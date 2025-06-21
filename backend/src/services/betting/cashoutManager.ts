@@ -74,40 +74,64 @@ class CashoutManager {
     }
     return CashoutManager.instance;
   }
-
   /**
    * Validates and stages a user's cashout request for batch processing.
    * This method serves as the primary entry point for all cashout requests.
    * @throws {CashoutError} When validation fails or business rules are violated
    */
-  public stageCashout({ payload, socket }: StageCashoutParams): void {
+  public stageCashout({
+    payload,
+    socket,
+    isFromAutoCashout = false,
+    autoCashoutMultiplier = null,
+  }: StageCashoutParams): void {
     try {
+      // STEP 1: CAPTURE MULTIPLIER AT EXACT MOMENT
       // Capture the multiplier at the exact moment of cashout request to
       // ensure the payout matches the player's action time and provides fair gameplay
-      let cashoutMultiplier = roundStateManager.getState().currentMultiplier;
+      let cashoutMultiplier =
+        autoCashoutMultiplier || roundStateManager.getState().currentMultiplier;
 
-      // Validation 1: Cashout payload validation
-      const { error } = cashoutSchema.validate(payload);
-      if (error) {
+      // STEP 2: HANDLE AUTO-CASHOUT PROCESSING
+      const { betsWithAutoCashouts } = roundStateManager.getState();
+      const betWithAutoCashout = betsWithAutoCashouts.get(payload.betId);
+
+      if (betWithAutoCashout && !betWithAutoCashout.isProcessed) {
+        betWithAutoCashout.isProcessed = true;
+      } else {
         throw new CashoutError({
-          description: "An error occurred",
+          description: "Bet already processed",
           httpCode: 400,
           isOperational: true,
-          internalMessage: error.message,
+          internalMessage: "Bet already processed",
         });
       }
 
-      // Validation 2: Business rule - cashout window must be open
-      if (!this.isCashoutWindowOpen) {
-        throw new CashoutError({
-          description: "Cashout window is closed",
-          httpCode: 400,
-          isOperational: true,
-          internalMessage: "Cashout window is closed",
-        });
+      // STEP 3: VALIDATE MANUAL CASHOUT REQUESTS
+      if (!isFromAutoCashout) {
+        // Validate payload structure
+        const { error } = cashoutSchema.validate(payload);
+        if (error) {
+          throw new CashoutError({
+            description: "An error occurred",
+            httpCode: 400,
+            isOperational: true,
+            internalMessage: error.message,
+          });
+        }
+
+        // Check if cashout window is open
+        if (!this.isCashoutWindowOpen) {
+          throw new CashoutError({
+            description: "Cashout window is closed",
+            httpCode: 400,
+            isOperational: true,
+            internalMessage: "Cashout window is closed",
+          });
+        }
       }
 
-      // Validation 3: Anti-abuse - prevent duplicate cashout requests for the same bet ID
+      // STEP 4: PREVENT DUPLICATE CASHOUT ATTEMPTS
       if (this.stagedCashouts.has(payload.betId)) {
         throw new CashoutError({
           description: "Cashout already in progress",
@@ -117,8 +141,11 @@ class CashoutManager {
         });
       }
 
-      // Validation 4: Verify that the bet exists in the current bets
-      const activeBet = roundStateManager.getState().betsMap.get(payload.betId);
+      // STEP 5: VERIFY BET EXISTS AND IS ACTIVE
+      const activeBet = roundStateManager
+        .getState()
+        .activeBets.get(payload.betId);
+
       if (!activeBet) {
         throw new CashoutError({
           description: "Bet not found",
@@ -128,7 +155,7 @@ class CashoutManager {
         });
       }
 
-      // Validation 5: Reject cashout if bet is already settled
+      // STEP 6: CHECK BET STATUS
       if (activeBet.bet.status === BetStatus.WON) {
         throw new CashoutError({
           description: "Bet already settled",
@@ -138,11 +165,11 @@ class CashoutManager {
         });
       }
 
-      // Validation 6: Calculate payout
+      // STEP 7: CALCULATE PAYOUT
       cashoutMultiplier = +cashoutMultiplier.toFixed(2);
       const payout = +(cashoutMultiplier * activeBet.bet.stake).toFixed(2);
 
-      // Validation 7: Cashout is valid - stage for batch processing
+      // STEP 8: STAGE CASHOUT FOR BATCH PROCESSING
       this.stagedCashouts.set(payload.betId, {
         betId: payload.betId,
         userId: activeBet.bet.userId,
@@ -152,13 +179,14 @@ class CashoutManager {
         socket, // Store the socket for direct notification later
       });
 
-      // Validation 8: Start the batch processor if it's not already scheduled or running
+      // STEP 9: TRIGGER BATCH PROCESSOR
       this.scheduleNextBatch();
     } catch (err) {
       console.error(
         `[CashoutManager] Cashout staging failed for bet ${payload.betId}:`,
         err
       );
+
       const message = err instanceof AppError ? err.message : "Cashout Failed";
 
       // Immediately notify the client of the failure
@@ -744,6 +772,48 @@ class CashoutManager {
       console.error(
         `[CashoutManager] CRITICAL: All ${batchSize} cashouts in batch failed processing.`
       );
+    }
+  }
+
+  /**
+   * Automatically processes cashouts for bets that have reached their specified auto-cashout multiplier.
+   *
+   * This method is typically called during each game round update to check if any active bets
+   * should be automatically cashed out based on the current multiplier reaching or exceeding
+   * their pre-set auto-cashout thresholds.
+   
+   * - Only processes bets that are both active and have auto-cashout enabled
+   * - Removes successfully processed bets from the auto-cashout tracking
+   * - Uses atomic operations to prevent race conditions during bet processing
+   *
+   * @throws {Error} May throw if stageCashout fails for individual bets
+   */
+  public autoCashout(): void {
+    const { activeBets, betsWithAutoCashouts, currentMultiplier } =
+      roundStateManager.getState();
+
+    if (!betsWithAutoCashouts.size || !activeBets.size || !currentMultiplier) {
+      return;
+    }
+
+    // Process bets with auto-cashout enabled
+    for (const [betId, autoCashoutData] of betsWithAutoCashouts) {
+      // Skip if already processed
+      if (autoCashoutData.isProcessed) continue;
+      // Check if threshold has been reached
+      if (currentMultiplier >= autoCashoutData.autoCashoutMultiplier) {
+        const bet = activeBets.get(betId);
+        if (bet) {
+          const payload: StageCashoutParams = {
+            payload: { betId: bet.bet.betId },
+            socket: bet.socket || null,
+            isFromAutoCashout: true,
+            autoCashoutMultiplier: autoCashoutData.autoCashoutMultiplier,
+          };
+
+          this.stageCashout(payload);
+        }
+      }
     }
   }
 

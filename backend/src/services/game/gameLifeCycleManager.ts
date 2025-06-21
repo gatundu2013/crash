@@ -72,17 +72,24 @@ class GameLifeCycleManager {
         serverSeed: roundState.provablyFairOutcome?.hashedServerSeed!,
       });
 
+      while (
+        bettingManager.getState().isProcessing ||
+        bettingManager.getState().stagedBetsCount > 0
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
       // Wait for any pending bet processing to complete before proceeding
       // This ensures data integrity
-      while (bettingManager.getIsProcessing()) {
+      while (bettingManager.getState().isProcessing) {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
       // Persist round data to database if any bets were placed
-      if (roundState.betsMap.size > 0) {
+      if (roundState.activeBets.size > 0) {
         await roundAnalyticsManager.saveCompleteRoundResultsWithRetries({
           roundId: roundState.roundId!,
-          totalPlayers: roundState.betsMap.size,
+          totalPlayers: roundState.activeBets.size,
           roundPhase: roundState.gamePhase!,
           provablyFairOutcome: roundState.provablyFairOutcome!,
           financial: {
@@ -130,6 +137,9 @@ class GameLifeCycleManager {
     const finalCrashPoint =
       currentRoundState.provablyFairOutcome?.finalMultiplier!;
 
+    // AutoCashout
+    cashoutManager.autoCashout();
+
     // Check if we've reached or exceeded the crash point
     if (newMultiplier >= finalCrashPoint) {
       this.handleRoundEnd();
@@ -172,23 +182,27 @@ class GameLifeCycleManager {
         roundStateManager.getState().provablyFairOutcome?.finalMultiplier,
     });
 
-    //Wait for all cashouts to complete
-    while (
-      cashoutManager.getState().isProcessing ||
-      cashoutManager.getState().stagedCount > 0
-    ) {
-      console.log(
-        `[GameLifeCycleManager]: Waiting for cashouts to complete--${
-          cashoutManager.getState().stagedCount
-        }`
-      );
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+    if (roundStateManager.getState().activeBets.size > 0) {
+      //Wait for all cashouts to complete
+      while (
+        cashoutManager.getState().isProcessing ||
+        cashoutManager.getState().stagedCount > 0
+      ) {
+        console.log(
+          `[GameLifeCycleManager]: Waiting for cashouts to complete--${
+            cashoutManager.getState().stagedCount
+          }`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
 
-    // Bust all bets that were not cashedout
-    await bettingManager.bustUncashedBets(
-      roundStateManager.getState().roundId!
-    );
+      // Bust all bets that were not cashedout
+      await bettingManager.bustUncashedBets({
+        roundId: roundStateManager.getState().roundId!,
+        finalMultiplier:
+          roundStateManager.getState().provablyFairOutcome?.finalMultiplier!,
+      });
+    }
 
     //Done for better UI rendering
     //Without this the UI would snap to the next phase
