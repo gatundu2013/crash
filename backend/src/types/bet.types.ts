@@ -101,6 +101,11 @@ export interface TopStaker
   username: string;
 }
 
+export interface BetWithAutoCashout {
+  autoCashoutMultiplier: number;
+  isProcessed: boolean;
+}
+
 // ==============================
 //        CASHOUT SECTION
 // ==============================
@@ -112,6 +117,8 @@ export interface CashoutPayload {
 export interface StageCashoutParams {
   payload: CashoutPayload;
   socket: Socket;
+  isFromAutoCashout: boolean;
+  autoCashoutMultiplier: number | null;
 }
 
 export interface StagedCashout extends CashoutPayload {
@@ -145,6 +152,21 @@ export interface NotifyCashoutResultsParams {
 export interface NotifyFailedCashoutsParams {
   failedCashouts: StagedCashout[];
   reason: string;
+}
+
+// ==============================
+//        CASHOUT MANAGER SECTION
+// ==============================
+
+export type AutoCashoutEntry = {
+  autoCashoutMultiplier: number;
+  isProcessed: boolean;
+};
+
+export interface AutoCashoutParams {
+  currentMultiplier: number;
+  activeBets: Map<string, BetInMemory>;
+  betsWithAutoCashouts: Map<string, AutoCashoutEntry>;
 }
 
 export interface LogBatchTimingParams {
