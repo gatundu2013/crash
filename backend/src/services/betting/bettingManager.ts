@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import User from "../../models/user.model";
 import mongoose, { AnyBulkWriteOperation } from "mongoose";
 import { AccountStatus } from "../../types/user.types";
-import { EVENT_NAMES, eventBus } from "../eventBus";
+import { EVENT_NAMES, eventBus } from "../game/eventBus";
 import { bettingSchema } from "../../validations/betting.validation";
 import { BettingError } from "../../utils/errors/bettingError";
 import { AppError } from "../../utils/errors/appError";
@@ -941,20 +941,17 @@ class BettingManager {
   public async bustUncashedBets({
     roundId,
     finalMultiplier,
+    session,
   }: {
     roundId: string;
     finalMultiplier: number;
+    session: mongoose.ClientSession;
   }): Promise<mongoose.UpdateWriteOpResult> {
     if (!roundId || typeof roundId !== "string") {
       throw new Error(
         `[BettingManager] Invalid roundId provided to bustUncashedBets. RoundId:${roundId}`
       );
     }
-
-    console.log(
-      "Butstinggaljfalfjqwioeuriofdjkfje",
-      roundStateManager.getState().provablyFairOutcome?.finalMultiplier
-    );
 
     try {
       console.info(
@@ -972,7 +969,8 @@ class BettingManager {
             status: BetStatus.LOST,
             finalMultiplier,
           },
-        }
+        },
+        { session }
       );
 
       // Verify the operation was acknowledged by the database

@@ -5,9 +5,11 @@ export interface RoundAnalyticsI {
   totalPlayers: number;
   roundPhase: GamePhase;
   provablyFairOutcome: ProvablyFairOutcomeI;
-  financial: {
-    totalBetAmount: number;
-    totalCashoutAmount: number;
-    houseProfit: number;
-  };
+  financial: FinancialsData;
+}
+
+export interface FinancialsData {
+  totalBetAmount: number;
+  totalCashoutAmount: number;
+  houseProfit: number;
 }

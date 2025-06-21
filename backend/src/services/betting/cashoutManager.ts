@@ -18,7 +18,7 @@ import { cashoutSchema } from "../../validations/betting.validation";
 import { CashoutError } from "../../utils/errors/cashoutError";
 import { AppError } from "../../utils/errors/appError";
 import { MongoError } from "mongodb";
-import { EVENT_NAMES, eventBus } from "../eventBus";
+import { EVENT_NAMES, eventBus } from "../game/eventBus";
 
 /**
  * CashoutManager handles all cashout operations in batches.
@@ -98,13 +98,6 @@ class CashoutManager {
 
       if (betWithAutoCashout && !betWithAutoCashout.isProcessed) {
         betWithAutoCashout.isProcessed = true;
-      } else {
-        throw new CashoutError({
-          description: "Bet already processed",
-          httpCode: 400,
-          isOperational: true,
-          internalMessage: "Bet already processed",
-        });
       }
 
       // STEP 3: VALIDATE MANUAL CASHOUT REQUESTS

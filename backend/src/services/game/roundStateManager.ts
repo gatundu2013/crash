@@ -15,7 +15,7 @@ import {
   ProvablyFairOutcomeI,
 } from "../../types/game.types";
 import { GameError } from "../../utils/errors/gameError";
-import { eventBus, EVENT_NAMES } from "../eventBus";
+import { eventBus, EVENT_NAMES } from "./eventBus";
 import { MultiplierGenerator } from "./multiplierGenerator";
 import { v4 as uuidv4 } from "uuid";
 
@@ -34,7 +34,8 @@ class RoundStateManager {
   private roundId: string | null = null;
   private provablyFairOutcome: ProvablyFairOutcomeI | null = null;
   private totalBetAmount = 0;
-  private totalCashouts = 0;
+  private totalCashoutAmount = 0;
+  private numberOfCashouts = 0;
   private activeBets: Map<string, BetInMemory> = new Map();
   private betsWithAutoCashouts: Map<string, BetWithAutoCashout> = new Map();
   private topStakers: TopStaker[] = []; // sent to clients --- For UI purposes
@@ -200,8 +201,14 @@ class RoundStateManager {
         activeBetEntry.bet.status = BetStatus.WON;
         activeBetEntry.bet.payout = cashout.payout;
         activeBetEntry.bet.cashoutMultiplier = cashout.cashoutMultiplier;
+
+        // Calcuate total Amount
+        this.totalCashoutAmount += cashout.payout;
+
+        console.log("Total Cashout Amount", this.totalCashoutAmount);
       }
 
+      // Check if player is a top staker
       const stakerIdx = topStakerIndexMap.get(cashout.betId);
       if (stakerIdx !== undefined) {
         const staker = this.topStakers[stakerIdx];
@@ -211,11 +218,11 @@ class RoundStateManager {
       }
     });
 
-    this.totalCashouts += processedCashouts.length;
+    this.numberOfCashouts += processedCashouts.length;
 
     const responseData = hasChanges
-      ? { topStakers: this.topStakers, totalCashouts: this.totalCashouts }
-      : { totalCashouts: this.totalCashouts };
+      ? { topStakers: this.topStakers, numberOfCashouts: this.numberOfCashouts }
+      : { numberOfCashouts: this.numberOfCashouts };
     io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_SUCCESSFUL_CASHOUTS, responseData);
   }
 
@@ -251,6 +258,7 @@ class RoundStateManager {
       clientSeed: this.clientSeed,
       activeBets: this.activeBets,
       totalBetAmount: this.totalBetAmount,
+      totalCashoutAmount: this.totalCashoutAmount,
       betsWithAutoCashouts: this.betsWithAutoCashouts,
     };
   }
@@ -270,7 +278,8 @@ class RoundStateManager {
     this.activeBets.clear();
     this.betsWithAutoCashouts.clear();
     this.topStakers = [];
-    this.totalCashouts = 0;
+    this.numberOfCashouts = 0;
+    this.totalCashoutAmount = 0;
     this.roundId = uuidv4();
 
     return this.roundId;

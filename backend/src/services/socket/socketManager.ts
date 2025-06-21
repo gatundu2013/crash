@@ -19,7 +19,8 @@ export class SocketManager {
     this.io.on("connection", (socket: Socket) => {
       socket.on(
         SOCKET_EVENTS.LISTENERS.BETTING.PLACE_BET,
-        (payload: BettingPayload) => bettingManager.stageBet(payload, socket)
+        (payload: BettingPayload) =>
+          bettingManager.stageBet({ payload, socket })
       );
       socket.on(
         SOCKET_EVENTS.LISTENERS.BETTING.CASHOUT,
