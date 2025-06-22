@@ -28,7 +28,7 @@ export interface ProvablyFairOutcomeI {
 }
 
 export interface ClientSeedDetails {
-  seed: string;
+  seed: string | null;
   userId: string;
 }
 

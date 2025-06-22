@@ -29,7 +29,7 @@ export interface BettingPayload {
   stake: number;
   autoCashoutMultiplier: number | null;
   userId: string;
-  clientSeed: string;
+  clientSeed: string | null;
   username: string;
   storeId: string; // Identifies which button/store triggered the bet
 }
