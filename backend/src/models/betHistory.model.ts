@@ -27,6 +27,8 @@ const betHistorySchema = new Schema<BetHistoryDoc>(
   { timestamps: true }
 );
 
+betHistorySchema.index({ betId: 1 });
+
 const BetHistory = model<BetHistoryDoc>("BetHistory", betHistorySchema);
 
 export default BetHistory;
