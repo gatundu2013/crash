@@ -167,13 +167,13 @@ class RoundStateManager {
           userId: bet.payload.userId,
         });
       }
+    });
 
-      // Emit roundInfo to all connected clients
-      io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_SUCCESSFUL_BETS, {
-        totalBetAmount: this.totalBetAmount,
-        topStakers: this.topStakers,
-        totalBets: this.activeBets.size,
-      });
+    // Emit roundInfo to all connected clients
+    io.emit(SOCKET_EVENTS.EMITTERS.BROADCAST_SUCCESSFUL_BETS, {
+      totalBetAmount: this.totalBetAmount,
+      topStakers: this.topStakers,
+      totalBets: this.activeBets.size,
     });
   }
 
@@ -204,8 +204,6 @@ class RoundStateManager {
 
         // Calcuate total Amount
         this.totalCashoutAmount += cashout.payout;
-
-        console.log("Total Cashout Amount", this.totalCashoutAmount);
       }
 
       // Check if player is a top staker
