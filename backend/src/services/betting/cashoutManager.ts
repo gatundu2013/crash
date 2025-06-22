@@ -54,7 +54,7 @@ class CashoutManager {
    * These values are tuned for production workloads and can be adjusted based on system capacity.
    */
   private readonly config = {
-    MAX_BATCH_SIZE: 1000, // Maximum number of cashouts to process in a single batch
+    MAX_BATCH_SIZE: 212, // Maximum number of cashouts to process in a single batch
     DEBOUNCE_TIME_MS: 500, // Delay to allow cashout accumulation before processing
     MAX_RETRIES: 3, // Maximum retry attempts for failed database transactions
     BASE_BACKOFF_MS: 100, // Base delay for exponential backoff retry strategy
@@ -213,10 +213,6 @@ class CashoutManager {
       return;
     }
 
-    console.info(
-      `[CashoutManager] Starting batch processing for ${this.stagedCashouts.size} staged cashouts`
-    );
-
     // Set the processing flag to prevent concurrent batch processing
     this.isProcessing = true;
 
@@ -234,10 +230,6 @@ class CashoutManager {
       let session: mongoose.ClientSession | null = null;
 
       try {
-        console.info(
-          `[CashoutManager] Batch processing attempt ${attempt}/${this.config.MAX_RETRIES}`
-        );
-
         // Record the start time of the batch processing for performance monitoring
         const batchStart = Date.now();
 
@@ -253,12 +245,9 @@ class CashoutManager {
         // Step 2: Fetch the account balances for all users in this batch
         const userAccountBalances = await User.find(
           { userId: { $in: Array.from(groupedUserCashouts.keys()) } },
-          { accountBalance: 1, userId: 1 }
-        ).session(session);
-
-        console.info(
-          `[CashoutManager] Fetched account balances for ${userAccountBalances.length} users`
-        );
+          { accountBalance: 1, userId: 1 },
+          { session }
+        ).lean();
 
         // Step 3: Safety check - should never happen, but protects against rare
         // data issues (e.g. missing users). Abort if no balances found.
@@ -309,10 +298,6 @@ class CashoutManager {
           failureCount: 0,
         });
 
-        console.info(
-          `[CashoutManager] Successfully processed batch of ${batch.length} cashouts on attempt ${attempt}`
-        );
-
         // Success - break out of retry loop
         break;
       } catch (error) {
@@ -325,9 +310,6 @@ class CashoutManager {
         if (session) {
           try {
             await session.abortTransaction();
-            console.debug(
-              "[CashoutManager] Transaction rolled back successfully"
-            );
           } catch (abortError) {
             console.error(
               "[CashoutManager] Critical error: Failed to abort transaction:",
@@ -350,9 +332,6 @@ class CashoutManager {
           // Exponential backoff: 100ms, 200ms, 400ms to reduce database contention
           const backoffDelay =
             this.config.BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
-          console.debug(
-            `[CashoutManager] Waiting ${backoffDelay}ms before retry`
-          );
           await new Promise((resolve) => setTimeout(resolve, backoffDelay));
 
           // Continue to next retry attempt
@@ -377,7 +356,6 @@ class CashoutManager {
         if (session) {
           try {
             await session.endSession();
-            console.debug("[CashoutManager] Database session ended");
           } catch (sessionError) {
             console.error(
               "[CashoutManager] Error ending database session:",
@@ -409,17 +387,8 @@ class CashoutManager {
       !this.debounceTimerId &&
       !this.isProcessing
     ) {
-      console.info(
-        `[CashoutManager] Scheduling batch processing in ${this.config.DEBOUNCE_TIME_MS}ms`
-      );
-
       this.debounceTimerId = setTimeout(() => {
-        this.processBatch().catch((error) => {
-          console.error(
-            "[CashoutManager] Scheduled batch processing failed:",
-            error
-          );
-        });
+        this.processBatch().catch((error) => {});
       }, this.config.DEBOUNCE_TIME_MS);
     }
   }
@@ -442,10 +411,6 @@ class CashoutManager {
     let batch = Array.from(this.stagedCashouts.values());
     batch = batch.slice(0, this.config.MAX_BATCH_SIZE);
 
-    console.info(
-      `[CashoutManager] Extracted ${batch.length} cashouts for batch processing`
-    );
-
     // Group user cashouts by user ID to optimize database operations
     const groupedUserCashouts = new Map<string, GroupedUserCashouts>(); // Key: userId
     let totalPayoutInBatch = 0;
@@ -466,10 +431,6 @@ class CashoutManager {
         });
       }
     });
-
-    console.info(
-      `[CashoutManager] Grouped ${batch.length} cashouts into ${groupedUserCashouts.size} user groups`
-    );
 
     return { batch, groupedUserCashouts };
   }
@@ -502,10 +463,6 @@ class CashoutManager {
     betHistoryUpdateOps: AnyBulkWriteOperation<BetHistoryI>[];
     balanceUpdateOps: AnyBulkWriteOperation[];
   } {
-    console.info(
-      `[CashoutManager] Preparing database operations for ${groupedUserCashouts.size} user groups`
-    );
-
     const balanceUpdateOps: AnyBulkWriteOperation[] = [];
     const betHistoryUpdateOps: AnyBulkWriteOperation<BetHistoryI>[] = [];
     const successfulCashouts: (StagedCashout & {
@@ -551,16 +508,8 @@ class CashoutManager {
           // Add the processed cashout to the successful list with updated balance information
           successfulCashouts.push({ ...cashout, newAccountBalance });
         });
-      } else {
-        console.warn(
-          `[CashoutManager] Skipping user ${userId} - account balance not found`
-        );
       }
     });
-
-    console.info(
-      `[CashoutManager] Database operations prepared: ${balanceUpdateOps.length} balance updates, ${betHistoryUpdateOps.length} bet history updates, ${successfulCashouts.length} successful cashouts`
-    );
 
     return { successfulCashouts, betHistoryUpdateOps, balanceUpdateOps };
   }
@@ -591,39 +540,17 @@ class CashoutManager {
     betHistoryUpdateOps,
     session,
   }: ExecuteCashoutOperationsParams): Promise<void> {
-    console.info(
-      `[CashoutManager] Executing database operations: ${balanceUpdateOps.length} balance updates, ${betHistoryUpdateOps.length} bet history updates`
-    );
-
-    const operationStart = Date.now();
-
     try {
-      // Step 1: Execute the bulk write operation to update all user balances at once
-      if (balanceUpdateOps.length > 0) {
-        const balanceResult = await User.bulkWrite(balanceUpdateOps, {
-          session,
-        });
-        console.info(
-          `[CashoutManager] Balance updates completed: ${balanceResult.modifiedCount} accounts updated`
-        );
-      }
-
-      // Step 2: Execute the bulk write operation to update all bet history documents
-      if (betHistoryUpdateOps.length > 0) {
-        const betHistoryResult = await BetHistory.bulkWrite(
-          betHistoryUpdateOps,
-          { session }
-        );
-        console.info(
-          `[CashoutManager] Bet history updates completed: ${betHistoryResult.modifiedCount} bets updated`
-        );
-      }
-
-      const operationEnd = Date.now();
-      const operationDuration = operationEnd - operationStart;
+      // Execute bulk write operations
+      const balanceResult = await User.bulkWrite(balanceUpdateOps, {
+        session,
+      });
+      const betHistoryResult = await BetHistory.bulkWrite(betHistoryUpdateOps, {
+        session,
+      });
 
       console.info(
-        `[CashoutManager] All database operations completed successfully in ${operationDuration}ms`
+        `[CashoutManager] Balance updates: ${balanceResult.modifiedCount} | Bet history updates: ${betHistoryResult.modifiedCount}`
       );
     } catch (err) {
       console.error(
@@ -640,12 +567,7 @@ class CashoutManager {
   private notifySuccessfulCashouts({
     successfulCashouts,
   }: NotifyCashoutResultsParams): void {
-    console.info(
-      `[CashoutManager] Notifying ${successfulCashouts.length} clients of successful cashouts.`
-    );
-
     let notificationsSent = 0;
-
     successfulCashouts.forEach((cashout) => {
       try {
         if (cashout.socket) {
@@ -658,10 +580,6 @@ class CashoutManager {
             }
           );
           notificationsSent++;
-        } else {
-          console.warn(
-            `[CashoutManager] Client socket disconnected for bet ${cashout.betId}`
-          );
         }
       } catch (error) {
         console.error(
@@ -670,10 +588,6 @@ class CashoutManager {
         );
       }
     });
-
-    console.info(
-      `[CashoutManager] Success notifications sent: ${notificationsSent}/${successfulCashouts.length}`
-    );
   }
 
   /**
@@ -683,10 +597,6 @@ class CashoutManager {
     failedCashouts,
     reason,
   }: NotifyFailedCashoutsParams): void {
-    console.info(
-      `[CashoutManager] Notifying ${failedCashouts.length} clients of failed cashouts. Reason: ${reason}`
-    );
-
     let notificationsSent = 0;
 
     failedCashouts.forEach((cashout) => {
@@ -699,10 +609,6 @@ class CashoutManager {
             }
           );
           notificationsSent++;
-        } else {
-          console.warn(
-            `[CashoutManager] Client socket disconnected for failed cashout bet ${cashout.betId}`
-          );
         }
       } catch (error) {
         console.error(
@@ -711,10 +617,6 @@ class CashoutManager {
         );
       }
     });
-
-    console.info(
-      `[CashoutManager] Failure notifications sent: ${notificationsSent}/${failedCashouts.length}`
-    );
   }
 
   /**
@@ -812,12 +714,12 @@ class CashoutManager {
 
   public openCashoutWindow(): void {
     this.isCashoutWindowOpen = true;
-    console.log("[CashoutManager] Cashout window opened");
+    // console.log("[CashoutManager] Cashout window opened");
   }
 
   public closeCashoutWindow(): void {
     this.isCashoutWindowOpen = false;
-    console.log("[CashoutManager] Cashout window closed");
+    // console.log("[CashoutManager] Cashout window closed");
   }
 
   /**

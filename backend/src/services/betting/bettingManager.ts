@@ -21,7 +21,6 @@ import {
   ValidateBetsParams,
 } from "../../types/bet.types";
 import { GameError } from "../../utils/errors/gameError";
-import { roundStateManager } from "../game/roundStateManager";
 
 /**
  * BettingManager handles all bet placement operations by grouping bets and processing them in batches.
@@ -47,8 +46,8 @@ class BettingManager {
    * These values are tuned for production workloads and can be adjusted based on system capacity.
    */
   private readonly config = {
-    MAX_BETS_PER_USER: 2, // Maximum number of concurrent bets allowed per user
-    MAX_BATCH_SIZE: 500, // Maximum number of bets to process in a batch
+    MAX_BETS_PER_USER: 500000, // Maximum number of concurrent bets allowed per user
+    MAX_BATCH_SIZE: 212, // Maximum number of bets to process in a batch
     DEBOUNCE_TIME_MS: 500, // Allows bet accumulation before processing
     MAX_RETRIES: 2, // Retry attempts for failed database transactions
     BASE_BACKOFF_MS: 200, // Time before next retry attempt
@@ -137,11 +136,6 @@ class BettingManager {
       // Trigger batch processing if conditions are met
       this.scheduleNextBatch();
     } catch (err) {
-      console.error(
-        `[BettingManager] Failed to stage bet for user ${payload.userId}:`,
-        err
-      );
-
       const message =
         err instanceof AppError ? err.description : "Failed to place bet";
 
@@ -177,21 +171,17 @@ class BettingManager {
   private async processBatch(): Promise<void> {
     // Prevent concurrent batch processing
     if (this.isProcessing) {
-      console.warn(
-        "[BettingManager] Batch processing already in progress, skipping..."
-      );
       return;
     }
 
     // Exit early if no bets are waiting for processing
     if (this.stagedBets.size === 0) {
-      console.info("[BettingManager] No staged bets to process.");
       return;
     }
 
-    console.info(
-      `[BettingManager] Starting batch processing for ${this.stagedBets.size} staged bets.`
-    );
+    // console.info(
+    //   `[BettingManager] Starting batch processing for ${this.stagedBets.size} staged bets.`
+    // );
 
     // Set processing flag to prevent concurrent executions
     this.isProcessing = true;
@@ -210,9 +200,6 @@ class BettingManager {
 
       try {
         const batchStart = Date.now();
-        console.info(
-          `[BettingManager] Batch processing attempt ${attempt}/${this.config.MAX_RETRIES}`
-        );
 
         // Initialize database transaction
         session = await mongoose.startSession();
@@ -222,10 +209,6 @@ class BettingManager {
         const { batch: extractedBatch, groupedUserBets } =
           this.extractAndGroupBets();
         batch = extractedBatch;
-
-        console.info(
-          `[BettingManager] Processing batch of ${batch.length} bets from ${groupedUserBets.size} users.`
-        );
 
         // Step 2: Fetch account balances for all users in this batch
         const userAccountBalances = await User.find(
@@ -261,10 +244,6 @@ class BettingManager {
             userAccountBalances,
           });
 
-        console.info(
-          `[BettingManager] Validation complete: ${validatedBets.length} accepted, ${failedBets.length} rejected.`
-        );
-
         // Handle case where all bets failed validation
         if (balanceUpdateOps.length === 0) {
           console.warn("[BettingManager] All bets in batch failed validation.");
@@ -282,9 +261,6 @@ class BettingManager {
 
         // Step 5: Commit the transaction to make all changes permanent
         await session.commitTransaction();
-        console.info(
-          "[BettingManager] Database transaction committed successfully."
-        );
 
         // Step 6: Notify clients of successful and failed bets
         this.notifySuccessfulBets(validatedBets);
@@ -302,9 +278,6 @@ class BettingManager {
         // This enables features like cashingout,auto-cashout tracking and live bet monitoring
         eventBus.emit(EVENT_NAMES.ACCEPTED_BETS, validatedBets);
 
-        console.info(
-          "[BettingManager] Batch processing completed successfully."
-        );
         break; // Success - exit retry loop
       } catch (error) {
         console.error(
@@ -404,10 +377,6 @@ class BettingManager {
       this.config.MAX_BATCH_SIZE
     );
 
-    console.info(
-      `[BettingManager] Extracted ${batch.length} bets for processing.`
-    );
-
     // Remove processed bets from staging to prevent reprocessing
     batch.forEach(({ payload }) => {
       this.stagedBets.delete(payload.betId);
@@ -432,10 +401,6 @@ class BettingManager {
         });
       }
     });
-
-    console.info(
-      `[BettingManager] Grouped ${batch.length} bets into ${groupedUserBets.size} user groups.`
-    );
 
     return { batch, groupedUserBets };
   }
@@ -467,10 +432,6 @@ class BettingManager {
     const validatedBets: AcceptedBet[] = [];
     const failedBets: FailedBetInfo[] = [];
 
-    console.info(
-      `[BettingManager] Validating bets for ${groupedUserBets.size} users.`
-    );
-
     // Create efficient lookup map for O(1) balance queries
     const userAccountBalancesMap = new Map<string, number>(); // Key: userId value: AccountBalance
     userAccountBalances.forEach((account) => {
@@ -483,9 +444,6 @@ class BettingManager {
 
       // Validation 1: User account must exist and be active
       if (userAccountBalance === undefined) {
-        console.warn(
-          `[BettingManager] User ${userId} not found or account inactive.`
-        );
         userGroup.bets.forEach((bet) => {
           failedBets.push({
             socket: bet.socket,
@@ -498,9 +456,6 @@ class BettingManager {
 
       // Validation 2: User must have sufficient balance for total stake
       if (userGroup.totalStake > userAccountBalance) {
-        console.warn(
-          `[BettingManager] User ${userId} has insufficient balance. Required: ${userGroup.totalStake}, Available: ${userAccountBalance}`
-        );
         userGroup.bets.forEach((bet) => {
           failedBets.push({
             socket: bet.socket,
@@ -531,15 +486,7 @@ class BettingManager {
       }));
 
       validatedBets.push(...userValidatedBets);
-
-      console.info(
-        `[BettingManager] User ${userId}: ${userGroup.bets.length} bets accepted, balance: ${userAccountBalance} -> ${newAccountBalance}`
-      );
     });
-
-    console.info(
-      `[BettingManager] Validation complete: ${validatedBets.length} bets accepted, ${failedBets.length} bets rejected.`
-    );
 
     return { validatedBets, failedBets, balanceUpdateOps };
   }
@@ -571,18 +518,14 @@ class BettingManager {
       );
     }
 
-    console.info(
-      `[BettingManager] Executing database operations for ${validatedBets.length} bets in round ${this.currentRoundId}.`
-    );
-
     try {
       // Step 1: Apply all user balance deductions in a single bulk operation
       const balanceUpdateResult = await User.bulkWrite(balanceUpdateOps, {
         session,
       });
-      console.info(
-        `[BettingManager] Balance updates completed: ${balanceUpdateResult.modifiedCount} accounts updated.`
-      );
+      // console.info(
+      //   `[BettingManager] Balance updates completed: ${balanceUpdateResult.modifiedCount} accounts updated.`
+      // );
 
       // Step 2: Create bet history records for all accepted bets
       const betHistories: BetHistoryI[] = validatedBets.map(({ payload }) => ({
@@ -600,8 +543,9 @@ class BettingManager {
       const betHistoryResult = await BetHistory.insertMany(betHistories, {
         session,
       });
+
       console.info(
-        `[BettingManager] Bet history records created: ${betHistoryResult.length} records inserted.`
+        `[BettingManager] ${betHistoryResult.length} bet history records inserted. ${balanceUpdateResult.modifiedCount} account balances updated.`
       );
     } catch (error) {
       console.error("[BettingManager] Database operations failed:", error);
@@ -627,10 +571,6 @@ class BettingManager {
    * @private
    */
   private notifySuccessfulBets(acceptedBets: AcceptedBet[]): void {
-    console.info(
-      `[BettingManager] Notifying ${acceptedBets.length} clients of successful bets.`
-    );
-
     let notificationsSent = 0;
 
     acceptedBets.forEach((bet) => {
@@ -650,10 +590,6 @@ class BettingManager {
             response
           );
           notificationsSent++;
-        } else {
-          console.warn(
-            `[BettingManager] Client socket disconnected for bet ${bet.payload.betId}`
-          );
         }
       } catch (error) {
         console.error(
@@ -662,10 +598,6 @@ class BettingManager {
         );
       }
     });
-
-    console.info(
-      `[BettingManager] Success notifications sent: ${notificationsSent}/${acceptedBets.length}`
-    );
   }
 
   /**
@@ -688,10 +620,6 @@ class BettingManager {
   private notifyFailedBets(failedBets: FailedBetInfo[]): void {
     if (failedBets.length === 0) return;
 
-    console.info(
-      `[BettingManager] Notifying ${failedBets.length} clients of bet failures.`
-    );
-
     let notificationsSent = 0;
 
     failedBets.forEach(({ socket, storeId, reason }) => {
@@ -707,10 +635,6 @@ class BettingManager {
             response
           );
           notificationsSent++;
-        } else {
-          console.warn(
-            "[BettingManager] Client socket disconnected for error notification"
-          );
         }
       } catch (error) {
         console.error(
@@ -719,10 +643,6 @@ class BettingManager {
         );
       }
     });
-
-    console.info(
-      `[BettingManager] Error notifications sent: ${notificationsSent}/${failedBets.length}`
-    );
   }
 
   /**
@@ -761,7 +681,6 @@ class BettingManager {
 
     // Additional performance warnings for monitoring
     if (durationMs > 1000) {
-      // 5 seconds
       console.warn(
         `[BettingManager] PERFORMANCE WARNING: Batch processing took ${durationSeconds}s, consider optimizing.`
       );
@@ -789,12 +708,6 @@ class BettingManager {
 
     const hasMaxBets = existingBets.size >= this.config.MAX_BETS_PER_USER;
 
-    if (hasMaxBets) {
-      console.warn(
-        `[BettingManager] User ${userId} has reached maximum concurrent bets.`
-      );
-    }
-
     return hasMaxBets;
   }
 
@@ -818,10 +731,6 @@ class BettingManager {
       !this.debounceTimerId &&
       this.stagedBets.size > 0
     ) {
-      console.info(
-        `[BettingManager] Scheduling batch processing for ${this.stagedBets.size} staged bets in ${this.config.DEBOUNCE_TIME_MS}ms.`
-      );
-
       this.debounceTimerId = setTimeout(() => {
         this.processBatch().catch((error) => {
           console.error(
@@ -857,10 +766,6 @@ class BettingManager {
 
     this.isBettingWindowOpen = true;
     this.currentRoundId = roundId;
-
-    console.info(
-      `[BettingManager] Betting window opened for round: ${roundId}`
-    );
   }
 
   /**
@@ -878,10 +783,6 @@ class BettingManager {
    */
   public closeBettingWindow(): void {
     this.isBettingWindowOpen = false;
-
-    console.info(
-      `[BettingManager] Betting window closed for round: ${this.currentRoundId}`
-    );
 
     // Clear user bet tracking to prepare for next round
     this.userIdsToBetIds.clear();
@@ -954,16 +855,13 @@ class BettingManager {
     }
 
     try {
-      console.info(
-        `[BettingManager] Busting uncashed bets for round: ${roundId}`
-      );
       const results = await BetHistory.updateMany(
         {
           roundId,
           status: { $ne: BetStatus.WON },
         },
         // Add final multiplier to busted bets...
-        // CRITICAL: Do this with caution to prevent exposing final multiplier
+        // At this point we are save to reveal the finalMultiplier as the round ended
         {
           $set: {
             status: BetStatus.LOST,
@@ -984,16 +882,8 @@ class BettingManager {
         });
       }
 
-      console.info(
-        `[BettingManager] Successfully busted ${results.modifiedCount} uncashed bets for round: ${roundId}`
-      );
-
       return results;
     } catch (err) {
-      console.error(
-        `[BettingManager] Failed to bust uncashed bets for round ${roundId}:`,
-        err
-      );
       throw err;
     }
   }
