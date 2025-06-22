@@ -173,13 +173,19 @@ class GameLifeCycleManager {
    */
   private async handleEndPhase(): Promise<void> {
     this.logPhaseStart(GamePhase.END);
+    roundStateManager.setGamePhase(GamePhase.END);
     cashoutManager.closeCashoutWindow();
 
-    const crashPoint =
-      roundStateManager.getState().provablyFairOutcome?.finalMultiplier!;
+    const { roundId, provablyFairOutcome } = roundStateManager.getState();
+
+    roundStateManager.updatePreviousMultipliers({
+      finalMultiplier: provablyFairOutcome?.finalMultiplier!,
+      roundId: roundId!,
+    });
 
     io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.END, {
-      finalCrashPoint: crashPoint,
+      finalCrashPoint: provablyFairOutcome?.finalMultiplier!,
+      roundId: roundId,
     });
 
     // Wait for all pending cashouts to complete

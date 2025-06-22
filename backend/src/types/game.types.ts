@@ -32,6 +32,11 @@ export interface ClientSeedDetails {
   userId: string;
 }
 
+export interface PreviousMultiplier {
+  finalMultiplier: number;
+  roundId: string;
+}
+
 export enum GamePhase {
   IDLE = "idle",
   PREPARING = "preparing",

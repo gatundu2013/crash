@@ -12,6 +12,7 @@ import {
 import {
   ClientSeedDetails,
   GamePhase,
+  PreviousMultiplier,
   ProvablyFairOutcomeI,
 } from "../../types/game.types";
 import { GameError } from "../../utils/errors/gameError";
@@ -27,11 +28,16 @@ import { v4 as uuidv4 } from "uuid";
 class RoundStateManager {
   private static instance: RoundStateManager;
 
+  private readonly config = {
+    MULTIPLIER_CACHE_SIZE: 15,
+  } as const;
+
   private gamePhase: GamePhase = GamePhase.IDLE;
   private clientSeedDetails: ClientSeedDetails[] = [];
   private clientSeed = ""; // Concatenated from client seed details
   private currentMultiplier = 1;
   private roundId: string | null = null;
+  private previousMultipliers: PreviousMultiplier[] = [];
   private provablyFairOutcome: ProvablyFairOutcomeI | null = null;
   private totalBetAmount = 0;
   private totalCashoutAmount = 0;
@@ -259,6 +265,23 @@ class RoundStateManager {
       totalCashoutAmount: this.totalCashoutAmount,
       betsWithAutoCashouts: this.betsWithAutoCashouts,
     };
+  }
+
+  /**
+   * Cache multipliers of a specific size
+   * Why: So that new users to the app can see game History
+   * This is for UI purposes
+   */
+  public updatePreviousMultipliers(params: PreviousMultiplier) {
+    if (!params.roundId || !params.finalMultiplier) return;
+
+    if (this.gamePhase !== GamePhase.END) return;
+
+    this.previousMultipliers.unshift(params);
+
+    if (this.previousMultipliers.length >= this.config.MULTIPLIER_CACHE_SIZE) {
+      this.previousMultipliers.pop();
+    }
   }
 
   /**
