@@ -93,11 +93,8 @@ class CashoutManager {
         autoCashoutMultiplier || roundStateManager.getState().currentMultiplier;
 
       // STEP 2: HANDLE AUTO-CASHOUT PROCESSING
-      const { betsWithAutoCashouts } = roundStateManager.getState();
-      const betWithAutoCashout = betsWithAutoCashouts.get(payload.betId);
-
-      if (betWithAutoCashout && !betWithAutoCashout.isProcessed) {
-        betWithAutoCashout.isProcessed = true;
+      if (autoCashoutMultiplier) {
+        cashoutMultiplier = autoCashoutMultiplier;
       }
 
       // STEP 3: VALIDATE MANUAL CASHOUT REQUESTS
@@ -684,42 +681,48 @@ class CashoutManager {
    * @throws {Error} May throw if stageCashout fails for individual bets
    */
   public autoCashout(): void {
-    const { activeBets, betsWithAutoCashouts, currentMultiplier } =
-      roundStateManager.getState();
+    const { activeBets, currentMultiplier } = roundStateManager.getState();
 
-    if (!betsWithAutoCashouts.size || !activeBets.size || !currentMultiplier) {
+    if (!activeBets.size || !currentMultiplier) {
       return;
     }
 
-    // Process bets with auto-cashout enabled
-    for (const [betId, autoCashoutData] of betsWithAutoCashouts) {
-      // Skip if already processed
-      if (autoCashoutData.isProcessed) continue;
-      // Check if threshold has been reached
-      if (currentMultiplier >= autoCashoutData.autoCashoutMultiplier) {
-        const bet = activeBets.get(betId);
-        if (bet) {
-          const payload: StageCashoutParams = {
-            payload: { betId: bet.bet.betId },
-            socket: bet.socket || null,
-            isFromAutoCashout: true,
-            autoCashoutMultiplier: autoCashoutData.autoCashoutMultiplier,
-          };
+    // Iterate over all active bets and check if they should be auto cashed out
+    // NOTE: I will remember to optimize the logic --
+    // Why: In case of a lager number of users e.g 2000 we have do to 20000 ops per sec(2000 ops per 100ms)
+    for (let [key, { bet, socket }] of activeBets) {
+      const isAtCriticalMultplier = currentMultiplier >= bet.criticalMultiplier;
 
-          this.stageCashout(payload);
-        }
+      if (!bet.autoCashoutMultiplier && !isAtCriticalMultplier) continue;
+      if (this.stagedCashouts.has(bet.betId)) continue;
+      if (bet.status === BetStatus.WON) continue;
+
+      const isAutoCashoutHit =
+        bet.autoCashoutMultiplier &&
+        currentMultiplier >= bet.autoCashoutMultiplier;
+
+      // If either critical multiplier or the user's auto cashout has been hit, trigger auto cashout
+      if (isAtCriticalMultplier || isAutoCashoutHit) {
+        this.stageCashout({
+          payload: bet,
+          socket,
+          isFromAutoCashout: true,
+          autoCashoutMultiplier: isAtCriticalMultplier
+            ? bet.criticalMultiplier
+            : bet.autoCashoutMultiplier,
+        });
       }
     }
   }
 
   public openCashoutWindow(): void {
     this.isCashoutWindowOpen = true;
-    // console.log("[CashoutManager] Cashout window opened");
+    console.log("[CashoutManager] Cashout window opened");
   }
 
   public closeCashoutWindow(): void {
     this.isCashoutWindowOpen = false;
-    // console.log("[CashoutManager] Cashout window closed");
+    console.log("[CashoutManager] Cashout window closed");
   }
 
   /**

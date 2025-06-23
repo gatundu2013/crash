@@ -1,7 +1,7 @@
 import { Document, model, Schema } from "mongoose";
 import { SingleBet } from "../types/bet.types";
 
-export interface BetHistoryI extends SingleBet {
+export interface BetHistoryI extends Omit<SingleBet, "criticalMultiplier"> {
   roundId: string;
   finalMultiplier: number | null;
   betId: string;

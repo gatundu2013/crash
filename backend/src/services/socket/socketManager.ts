@@ -25,7 +25,12 @@ export class SocketManager {
       socket.on(
         SOCKET_EVENTS.LISTENERS.BETTING.CASHOUT,
         (payload: CashoutPayload) =>
-          cashoutManager.stageCashout({ payload, socket })
+          cashoutManager.stageCashout({
+            payload,
+            socket,
+            isFromAutoCashout: false,
+            autoCashoutMultiplier: null,
+          })
       );
 
       socket.on("disconnect", () => {

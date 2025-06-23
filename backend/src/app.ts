@@ -8,7 +8,6 @@ import { SocketManager } from "./services/socket/socketManager";
 import { corsOptions } from "./config/cors.config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-
 const app = express();
 
 app.use(cors(corsOptions));

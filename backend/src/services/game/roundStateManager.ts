@@ -43,7 +43,6 @@ class RoundStateManager {
   private totalCashoutAmount = 0;
   private numberOfCashouts = 0;
   private activeBets: Map<string, BetInMemory> = new Map();
-  private betsWithAutoCashouts: Map<string, BetWithAutoCashout> = new Map();
   private topStakers: TopStaker[] = []; // sent to clients --- For UI purposes
 
   private constructor() {
@@ -128,19 +127,11 @@ class RoundStateManager {
           payout: null,
           userId: bet.payload.userId,
           stake: bet.payload.stake,
+          criticalMultiplier: GAME_CONFIG.MAX_HOUSE_PAYOUT / bet.payload.stake,
           status: BetStatus.PENDING,
         },
         socket: bet.socket,
       });
-
-      // If this bet has an auto-cashout multiplier, track it for automatic cashout processing.
-      // This optimizes server operations by focusing only on relevant bets.
-      if (bet.payload.autoCashoutMultiplier) {
-        this.betsWithAutoCashouts.set(bet.payload.betId, {
-          autoCashoutMultiplier: bet.payload.autoCashoutMultiplier,
-          isProcessed: false,
-        });
-      }
 
       // Increment the total bet amount for this round.
       this.totalBetAmount += bet.payload.stake;
@@ -263,7 +254,6 @@ class RoundStateManager {
       activeBets: this.activeBets,
       totalBetAmount: this.totalBetAmount,
       totalCashoutAmount: this.totalCashoutAmount,
-      betsWithAutoCashouts: this.betsWithAutoCashouts,
     };
   }
 
@@ -297,7 +287,6 @@ class RoundStateManager {
     this.provablyFairOutcome = null;
     this.totalBetAmount = 0;
     this.activeBets.clear();
-    this.betsWithAutoCashouts.clear();
     this.topStakers = [];
     this.numberOfCashouts = 0;
     this.totalCashoutAmount = 0;

@@ -9,6 +9,7 @@ export interface GameConfig {
 
   MIN_STAKE: number;
   MAX_STAKE: number;
+  MAX_HOUSE_PAYOUT: number;
 
   MIN_AUTO_CASHOUT_MULTIPLIER: number;
 

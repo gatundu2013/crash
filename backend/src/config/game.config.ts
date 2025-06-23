@@ -11,6 +11,7 @@ export const GAME_CONFIG: GameConfig = {
 
   MIN_STAKE: 10,
   MAX_STAKE: 500,
+  MAX_HOUSE_PAYOUT: 100,
 
   MIN_AUTO_CASHOUT_MULTIPLIER: 1.01,
 

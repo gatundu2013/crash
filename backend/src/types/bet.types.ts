@@ -88,6 +88,7 @@ export interface SingleBet {
   payout: number | null;
   cashoutMultiplier: number | null;
   autoCashoutMultiplier: number | null;
+  criticalMultiplier: number; // Multiplier whose payout brings MAX_HOUSE_PAYOUT
   status: BetStatus;
 }
 
@@ -97,7 +98,10 @@ export interface BetInMemory {
 }
 
 export interface TopStaker
-  extends Omit<SingleBet, "userId" | "status" | "autoCashoutMultiplier"> {
+  extends Omit<
+    SingleBet,
+    "userId" | "status" | "autoCashoutMultiplier" | "criticalMultiplier"
+  > {
   username: string;
 }
 
