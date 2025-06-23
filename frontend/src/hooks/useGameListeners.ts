@@ -12,6 +12,7 @@ const useGameListeners = () => {
     handleBettingPhase,
     handleBroadcastSuccessfulBets,
     handleBroadcastSuccessfulCashouts,
+    handleBroadcastHashedServerSeed,
   } = useGameStore.getState();
 
   useEffect(() => {
@@ -41,6 +42,10 @@ const useGameListeners = () => {
       {
         eventName: SOCKET_EVENTS.LISTENERS.BROADCAST_SUCCESSFUL_CASHOUTS,
         handler: handleBroadcastSuccessfulCashouts,
+      },
+      {
+        eventName: SOCKET_EVENTS.LISTENERS.BROADCAST_HASHED_SERVER_SEED,
+        handler: handleBroadcastHashedServerSeed,
       },
     ];
 

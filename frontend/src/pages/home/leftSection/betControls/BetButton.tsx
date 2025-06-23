@@ -34,6 +34,13 @@ const BetButton = ({
   }, [gamePhase, hasAutoBet]);
 
   const handleBetUI = () => {
+    if (isRequesting) {
+      return {
+        className: "text-sm font-medium",
+        content: <span>Requesting...</span>,
+      };
+    }
+
     if (hasScheduledBet) {
       return {
         className:
@@ -63,16 +70,10 @@ const BetButton = ({
           "bg-gradient-to-l from-[#FBD765] to-[#EF9E3F] text-black shadow-[0_0_12px_rgba(238,206,35,0.3),_inset_0_-2px_0_#CA7A1D]",
         content: (
           <div className="flex gap-1 items-baseline text-[15px]">
-            {isRequesting ? (
-              <span className="text-sm font-medium">Requesting...</span>
-            ) : (
-              <>
-                <span className="text-sm font-medium">Cashout KES</span>
-                <span className="font-semibold">
-                  {(stake * currentMultiplier).toFixed(2)}
-                </span>
-              </>
-            )}
+            <span className="text-sm font-medium">Cashout KES</span>
+            <span className="font-semibold">
+              {(stake * currentMultiplier).toFixed(2)}
+            </span>
           </div>
         ),
       };

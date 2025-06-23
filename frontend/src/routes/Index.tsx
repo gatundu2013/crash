@@ -3,12 +3,13 @@ import SignUp from "@/pages/auth/SignUp";
 import Home from "@/pages/home/Index";
 import MainLayout from "@/layouts/MainLayout";
 import { createBrowserRouter, Outlet } from "react-router-dom";
+import NotFound from "@/pages/NotFound/Index";
 
 export const routes = createBrowserRouter([
   {
     path: "/",
     element: (
-      <MainLayout sidebarContent={<div>chats here</div>}>
+      <MainLayout>
         <Outlet />
       </MainLayout>
     ),
@@ -25,6 +26,7 @@ export const routes = createBrowserRouter([
         path: "/signin",
         element: <SignIn />,
       },
+      { path: "*", element: <NotFound /> },
     ],
   },
 ]);

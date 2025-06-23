@@ -2,7 +2,7 @@ import useGameStore from "@/stores/gameStore";
 
 const LiveBetsHeader = () => {
   const totalBets = useGameStore((state) => state.totalBets);
-  const totalCashouts = useGameStore((state) => state.totalCashouts);
+  const numberOfCashouts = useGameStore((state) => state.numberOfCashouts);
   const totalBetAmount = useGameStore((state) => state.totalBetAmount);
 
   return (
@@ -14,7 +14,7 @@ const LiveBetsHeader = () => {
             <div className="absolute w-1 h-1 rounded-full bg-green-1 animate-pulse duration-1000" />
           </div>
           <span className="flex gap-1">
-            {totalCashouts}/{totalBets} <span>Players</span>
+            {numberOfCashouts}/{totalBets} <span>Players</span>
           </span>
         </div>
 

@@ -32,7 +32,7 @@ export interface GameStoreI {
   totalBets: number;
   cashedOutBetsSize: number;
   totalBetAmount: number;
-  totalCashouts: number;
+  numberOfCashouts: number;
 
   // phase handlers
   handlePreparingPhase: (data: PreparingPhaseData) => void;
@@ -43,10 +43,11 @@ export interface GameStoreI {
 
   handleBroadcastSuccessfulBets: (data: BroadcastBetRes) => void;
   handleBroadcastSuccessfulCashouts: (data: BroadcastCashoutRes) => void;
+  handleBroadcastHashedServerSeed: (data: BroadcastHashedServerSeed) => void;
 }
 
 export interface PreparingPhaseData {
-  hashedServerSeed: string;
+  gamePhase: string;
 }
 export interface RunningPhaseData {
   currentMultiplier: number;
@@ -61,6 +62,10 @@ export interface ErrorPhaseData {
   message: string;
 }
 
+export interface BroadcastHashedServerSeed {
+  hashedServerSeed: string;
+}
+
 export interface BroadcastBetRes {
   totalBetAmount: number;
   totalBets: number;
@@ -69,5 +74,5 @@ export interface BroadcastBetRes {
 
 export interface BroadcastCashoutRes {
   topStakers: TopStaker[];
-  totalCashouts: number;
+  numberOfCashouts: number;
 }

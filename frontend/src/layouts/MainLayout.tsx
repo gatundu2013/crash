@@ -10,7 +10,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     <div className="relative flex w-full">
       <div className={"w-full"}>
         <NavBar />
-        <div className="mt-1 lg:mt-2 px-2">{children}</div>
+        <div className="mt-1 lg:mt-2 px-2 min-h-[calc(100vh-62px)]">
+          {children}
+        </div>
         <div>Footer</div>
       </div>
     </div>

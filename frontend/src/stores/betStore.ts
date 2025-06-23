@@ -90,7 +90,7 @@ const createBetStore = (storeId: string) => {
         stake,
         autoCashoutMultiplier: hasAutoCashout ? autoCashoutValue : null,
         userId: userData.userId,
-        clientSeed: "",
+        clientSeed: null,
         username: userData.username,
         storeId,
       };

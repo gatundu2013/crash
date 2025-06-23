@@ -8,6 +8,7 @@ import {
   type ErrorPhaseData,
   type BroadcastBetRes,
   type BroadcastCashoutRes,
+  type BroadcastHashedServerSeed,
 } from "@/types/game.types";
 import { create } from "zustand";
 
@@ -21,8 +22,8 @@ const useGameStore = create<GameStoreI>((set) => ({
   topStakers: [],
   countDown: 1,
   totalBets: 0,
-  totalCashouts: 0,
   cashedOutBetsSize: 0,
+  numberOfCashouts: 0,
   totalBetAmount: 0,
 
   // PHASE HANDLERS
@@ -30,7 +31,6 @@ const useGameStore = create<GameStoreI>((set) => ({
   handlePreparingPhase(data: PreparingPhaseData) {
     set({
       gamePhase: GamePhase.PREPARING,
-      hashedServerSeed: data?.hashedServerSeed,
     });
   },
 
@@ -62,6 +62,12 @@ const useGameStore = create<GameStoreI>((set) => ({
     });
   },
 
+  handleBroadcastHashedServerSeed(data: BroadcastHashedServerSeed) {
+    set({
+      hashedServerSeed: data?.hashedServerSeed,
+    });
+  },
+
   handleBroadcastSuccessfulBets(data: BroadcastBetRes) {
     set({
       totalBetAmount: data.totalBetAmount ?? 0,
@@ -72,8 +78,8 @@ const useGameStore = create<GameStoreI>((set) => ({
 
   handleBroadcastSuccessfulCashouts(data: BroadcastCashoutRes) {
     set({
-      topStakers: data.topStakers && data.topStakers,
-      totalCashouts: data?.totalCashouts ?? 0,
+      topStakers: data.topStakers ?? [],
+      numberOfCashouts: data?.numberOfCashouts ?? 0,
     });
   },
 }));
