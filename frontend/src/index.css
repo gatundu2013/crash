@@ -62,6 +62,22 @@
   --light-white: #b3bec1;
 }
 
+@keyframes scaleUp {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-up {
+  display: inline-block;
+  animation: scaleUp 0.4s ease-out forwards;
+}
+
 body {
   background-color: var(--layer-1);
   color: white;

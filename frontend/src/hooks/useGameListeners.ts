@@ -13,6 +13,7 @@ const useGameListeners = () => {
     handleBroadcastSuccessfulBets,
     handleBroadcastSuccessfulCashouts,
     handleBroadcastHashedServerSeed,
+    onConnectData,
   } = useGameStore.getState();
 
   useEffect(() => {
@@ -46,6 +47,10 @@ const useGameListeners = () => {
       {
         eventName: SOCKET_EVENTS.LISTENERS.BROADCAST_HASHED_SERVER_SEED,
         handler: handleBroadcastHashedServerSeed,
+      },
+      {
+        eventName: SOCKET_EVENTS.LISTENERS.ON_CONNECT_DATA,
+        handler: onConnectData,
       },
     ];
 

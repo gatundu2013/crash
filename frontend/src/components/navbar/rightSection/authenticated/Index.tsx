@@ -29,7 +29,7 @@ const NavAutheticated = () => {
       </Button>
 
       <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-        <Avatar className="border-2 border-layer-5 h-9 w-9">
+        <Avatar className="border-2 border-green-1 h-9 w-9">
           <AvatarImage src={Avatar1} alt="User avatar" />
           <AvatarFallback className="bg-layer-4">AV</AvatarFallback>
         </Avatar>

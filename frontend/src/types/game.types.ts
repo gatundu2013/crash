@@ -8,8 +8,8 @@ export enum GamePhase {
 }
 
 export interface PreviousMultiplier {
+  finalMultiplier: number;
   roundId: string;
-  multiplier: number;
 }
 
 export interface TopStaker {
@@ -24,7 +24,7 @@ export interface GameStoreI {
   gamePhase: GamePhase;
   hashedServerSeed: string;
   currentMultiplier: number;
-  finalCrashPoint: number;
+  finalMultiplier: number;
   message: string;
   previousMultipliers: PreviousMultiplier[];
   topStakers: TopStaker[];
@@ -44,6 +44,7 @@ export interface GameStoreI {
   handleBroadcastSuccessfulBets: (data: BroadcastBetRes) => void;
   handleBroadcastSuccessfulCashouts: (data: BroadcastCashoutRes) => void;
   handleBroadcastHashedServerSeed: (data: BroadcastHashedServerSeed) => void;
+  onConnectData: (data: OnConnectData) => void;
 }
 
 export interface PreparingPhaseData {
@@ -53,7 +54,8 @@ export interface RunningPhaseData {
   currentMultiplier: number;
 }
 export interface EndPhaseData {
-  finalCrashPoint: number;
+  finalMultiplier: number;
+  roundId: string;
 }
 export interface BettingPhaseData {
   countDown: number;
@@ -75,4 +77,9 @@ export interface BroadcastBetRes {
 export interface BroadcastCashoutRes {
   topStakers: TopStaker[];
   numberOfCashouts: number;
+}
+
+export interface OnConnectData {
+  topStakers: TopStaker[];
+  previousMultipliers: PreviousMultiplier[];
 }

@@ -9,6 +9,7 @@ import {
   type BroadcastBetRes,
   type BroadcastCashoutRes,
   type BroadcastHashedServerSeed,
+  type OnConnectData,
 } from "@/types/game.types";
 import { create } from "zustand";
 
@@ -16,7 +17,7 @@ const useGameStore = create<GameStoreI>((set) => ({
   gamePhase: GamePhase.IDLE,
   hashedServerSeed: "",
   currentMultiplier: 1,
-  finalCrashPoint: 0,
+  finalMultiplier: 0,
   message: "",
   previousMultipliers: [],
   topStakers: [],
@@ -42,10 +43,16 @@ const useGameStore = create<GameStoreI>((set) => ({
   },
 
   handleEndPhase(data: EndPhaseData) {
-    set({
+    const { finalMultiplier, roundId } = data;
+
+    set((state) => ({
       gamePhase: GamePhase.END,
-      finalCrashPoint: data?.finalCrashPoint,
-    });
+      finalMultiplier: data?.finalMultiplier,
+      previousMultipliers: [
+        { finalMultiplier, roundId },
+        ...state.previousMultipliers,
+      ],
+    }));
   },
 
   handleBettingPhase(data: BettingPhaseData) {
@@ -80,6 +87,13 @@ const useGameStore = create<GameStoreI>((set) => ({
     set({
       topStakers: data.topStakers ?? [],
       numberOfCashouts: data?.numberOfCashouts ?? 0,
+    });
+  },
+
+  onConnectData(data: OnConnectData) {
+    set({
+      topStakers: data.topStakers || [],
+      previousMultipliers: data.previousMultipliers || [],
     });
   },
 }));
