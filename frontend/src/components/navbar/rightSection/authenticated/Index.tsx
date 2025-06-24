@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Avatar1 from "../../../../assets/avatar.png";
 import { Button } from "@/components/ui/button";
-import { RiWallet3Line, RiUserSettingsLine } from "react-icons/ri";
+import { RiWallet3Line } from "react-icons/ri";
 import useAuthStore from "@/stores/authStore";
 
 const NavAutheticated = () => {
@@ -29,11 +29,10 @@ const NavAutheticated = () => {
       </Button>
 
       <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-        <Avatar className="border-2 border-green-1 h-9 w-9">
+        <Avatar className="border-2 border-green-1 h-10 w-10">
           <AvatarImage src={Avatar1} alt="User avatar" />
           <AvatarFallback className="bg-layer-4">AV</AvatarFallback>
         </Avatar>
-        <RiUserSettingsLine className="text-white/70 hidden md:block" />
       </div>
     </div>
   );
