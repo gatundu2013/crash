@@ -4,6 +4,7 @@ import Home from "@/pages/home/Index";
 import MainLayout from "@/layouts/MainLayout";
 import { createBrowserRouter, Outlet } from "react-router-dom";
 import NotFound from "@/pages/NotFound/Index";
+import Wallet from "@/pages/wallet/Index";
 
 export const routes = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ export const routes = createBrowserRouter([
       {
         path: "/signin",
         element: <SignIn />,
+      },
+      {
+        path: "/wallet",
+        element: <Wallet />,
       },
       { path: "*", element: <NotFound /> },
     ],

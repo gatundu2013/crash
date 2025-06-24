@@ -3,9 +3,34 @@ import Avatar1 from "../../../../assets/avatar.png";
 import { Button } from "@/components/ui/button";
 import { RiWallet3Line } from "react-icons/ri";
 import useAuthStore from "@/stores/authStore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  MdAccountBalanceWallet,
+  MdShield,
+  MdHistory,
+  MdStraighten,
+  MdTrendingUp,
+  MdLogout,
+  MdPerson,
+} from "react-icons/md";
 
 const NavAutheticated = () => {
   const userData = useAuthStore((state) => state.userData);
+
+  const navItems = [
+    { label: "Wallet", Icon: MdAccountBalanceWallet },
+    { label: "Profile", Icon: MdPerson },
+    { label: "Game Limits", Icon: MdTrendingUp },
+    { label: "Bet History", Icon: MdHistory },
+    { label: "Game Rules", Icon: MdStraighten },
+    { label: "Provably Setting", Icon: MdShield },
+    { label: "Logout", Icon: MdLogout },
+  ];
 
   return (
     <div className="flex items-center gap-3">
@@ -28,12 +53,27 @@ const NavAutheticated = () => {
         Deposit
       </Button>
 
-      <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-        <Avatar className="border-2 border-green-1 h-10 w-10">
-          <AvatarImage src={Avatar1} alt="User avatar" />
-          <AvatarFallback className="bg-layer-4">AV</AvatarFallback>
-        </Avatar>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger className="cursor-pointer">
+          <Avatar className="border-2 border-green-1 h-10 w-10">
+            <AvatarImage src={Avatar1} alt="User avatar" />
+            <AvatarFallback className="bg-layer-4">AV</AvatarFallback>
+          </Avatar>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="min-w-screen lg:min-w-64 py-3 border border-layer-5 mr-3 mt-2">
+          {navItems.map((item) => (
+            <DropdownMenuLabel
+              key={item.label}
+              className={`flex items-center text-white/75 text-[16px] font-medium
+                  transition-all duration-300 rounded-md
+                  text-sm cursor-pointer py-2 hover:bg-white/10 hover:text-white`}
+            >
+              <item.Icon className="mr-2 size-6" />
+              {item.label}
+            </DropdownMenuLabel>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };
