@@ -29,7 +29,7 @@ class RoundStateManager {
   private static instance: RoundStateManager;
 
   private readonly config = {
-    MULTIPLIER_CACHE_SIZE: 15,
+    MULTIPLIER_CACHE_SIZE: 20,
   } as const;
 
   private gamePhase: GamePhase = GamePhase.IDLE;
@@ -254,6 +254,7 @@ class RoundStateManager {
       activeBets: this.activeBets,
       totalBetAmount: this.totalBetAmount,
       totalCashoutAmount: this.totalCashoutAmount,
+      previousMultipliers: this.previousMultipliers,
     };
   }
 

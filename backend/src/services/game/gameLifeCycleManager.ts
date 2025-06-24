@@ -2,6 +2,7 @@ import { io } from "../../app";
 import { GAME_CONFIG } from "../../config/game.config";
 import { SOCKET_EVENTS } from "../../config/socketEvents.config";
 import { GamePhase } from "../../types/game.types";
+import { toFixedDecimals } from "../../utils/toFixedDecimals";
 import { bettingManager } from "../betting/bettingManager";
 import { cashoutManager } from "../betting/cashoutManager";
 import RoundAnalyticsManager from "./roundAnalyticsManager";
@@ -161,7 +162,7 @@ class GameLifeCycleManager {
       // Update multiplier and broadcast to clients
       roundStateManager.setCurrentMultiplier(nextMultiplier);
       io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.RUNNING, {
-        currentMultiplier: nextMultiplier,
+        currentMultiplier: +toFixedDecimals(nextMultiplier),
       });
 
       await this.sleep(this.config.multiplierCountUpIntervalMs);
@@ -179,12 +180,12 @@ class GameLifeCycleManager {
     const { roundId, provablyFairOutcome } = roundStateManager.getState();
 
     roundStateManager.updatePreviousMultipliers({
-      finalMultiplier: provablyFairOutcome?.finalMultiplier!,
+      finalMultiplier: +toFixedDecimals(provablyFairOutcome?.finalMultiplier!),
       roundId: roundId!,
     });
 
     io.emit(SOCKET_EVENTS.EMITTERS.GAME_PHASE.END, {
-      finalCrashPoint: provablyFairOutcome?.finalMultiplier!,
+      finalMultiplier: +toFixedDecimals(provablyFairOutcome?.finalMultiplier!),
       roundId: roundId,
     });
 

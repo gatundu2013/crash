@@ -3,6 +3,7 @@ import { bettingManager } from "../betting/bettingManager";
 import { SOCKET_EVENTS } from "../../config/socketEvents.config";
 import { BettingPayload, CashoutPayload } from "../../types/bet.types";
 import { cashoutManager } from "../betting/cashoutManager";
+import { roundStateManager } from "../game/roundStateManager";
 
 export class SocketManager {
   private io: Server;
@@ -22,6 +23,7 @@ export class SocketManager {
         (payload: BettingPayload) =>
           bettingManager.stageBet({ payload, socket })
       );
+
       socket.on(
         SOCKET_EVENTS.LISTENERS.BETTING.CASHOUT,
         (payload: CashoutPayload) =>
@@ -35,6 +37,11 @@ export class SocketManager {
 
       socket.on("disconnect", () => {
         console.log(`Client disconnected: ${socket.id}`);
+      });
+
+      socket.emit(SOCKET_EVENTS.EMITTERS.ON_CONNECT_DATA, {
+        topStakers: roundStateManager.getState().topStakers,
+        previousMultipliers: roundStateManager.getState().previousMultipliers,
       });
     });
   }
