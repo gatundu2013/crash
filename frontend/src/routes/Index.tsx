@@ -6,6 +6,7 @@ import { createBrowserRouter, Outlet } from "react-router-dom";
 import NotFound from "@/pages/NotFound/Index";
 import Wallet from "@/pages/wallet/Index";
 import BetHistory from "@/pages/betHistory/Index";
+import GameRules from "@/pages/gameRules/Index";
 
 export const routes = createBrowserRouter([
   {
@@ -35,6 +36,10 @@ export const routes = createBrowserRouter([
       {
         path: "/bethistory",
         element: <BetHistory />,
+      },
+      {
+        path: "/gameRules",
+        element: <GameRules />,
       },
       { path: "*", element: <NotFound /> },
     ],

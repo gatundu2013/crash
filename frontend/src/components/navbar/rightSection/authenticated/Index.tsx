@@ -23,21 +23,25 @@ import { useLogout } from "@/hooks/auth/useLogout";
 const NavAutheticated = () => {
   const userData = useAuthStore((state) => state.userData);
   const { logout } = useLogout();
-  const naviate = useNavigate();
+  const navigate = useNavigate();
 
   const navItems = [
     {
       label: "Wallet",
       Icon: MdAccountBalanceWallet,
-      handler: () => naviate("/wallet"),
+      handler: () => navigate("/wallet"),
     },
     { label: "Game Limits", Icon: MdTrendingUp },
     {
       label: "Bet History",
       Icon: MdHistory,
-      handler: () => naviate("/bethistory"),
+      handler: () => navigate("/bethistory"),
     },
-    { label: "Game Rules", Icon: MdStraighten },
+    {
+      label: "Game Rules",
+      Icon: MdStraighten,
+      handler: () => navigate("/gameRules"),
+    },
     { label: "Provably Setting", Icon: MdShield },
     { label: "Logout", Icon: MdLogout, handler: () => logout() },
   ];
