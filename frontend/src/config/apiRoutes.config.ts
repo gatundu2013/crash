@@ -3,5 +3,6 @@ export const API_ROUTES = {
     SIGN_UP: `/user/auth/signup`,
     SIGN_IN: `/user/auth/signin`,
     STATUS: `/user/auth/status`,
+    LOGOUT: "/user/auth/logout",
   },
 };

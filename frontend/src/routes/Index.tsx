@@ -5,6 +5,7 @@ import MainLayout from "@/layouts/MainLayout";
 import { createBrowserRouter, Outlet } from "react-router-dom";
 import NotFound from "@/pages/NotFound/Index";
 import Wallet from "@/pages/wallet/Index";
+import BetHistory from "@/pages/betHistory/Index";
 
 export const routes = createBrowserRouter([
   {
@@ -30,6 +31,10 @@ export const routes = createBrowserRouter([
       {
         path: "/wallet",
         element: <Wallet />,
+      },
+      {
+        path: "/bethistory",
+        element: <BetHistory />,
       },
       { path: "*", element: <NotFound /> },
     ],

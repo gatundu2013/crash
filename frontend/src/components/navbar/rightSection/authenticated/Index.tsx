@@ -16,20 +16,30 @@ import {
   MdStraighten,
   MdTrendingUp,
   MdLogout,
-  MdPerson,
 } from "react-icons/md";
+import { useNavigate } from "react-router-dom";
+import { useLogout } from "@/hooks/auth/useLogout";
 
 const NavAutheticated = () => {
   const userData = useAuthStore((state) => state.userData);
+  const { logout } = useLogout();
+  const naviate = useNavigate();
 
   const navItems = [
-    { label: "Wallet", Icon: MdAccountBalanceWallet },
-    { label: "Profile", Icon: MdPerson },
+    {
+      label: "Wallet",
+      Icon: MdAccountBalanceWallet,
+      handler: () => naviate("/wallet"),
+    },
     { label: "Game Limits", Icon: MdTrendingUp },
-    { label: "Bet History", Icon: MdHistory },
+    {
+      label: "Bet History",
+      Icon: MdHistory,
+      handler: () => naviate("/bethistory"),
+    },
     { label: "Game Rules", Icon: MdStraighten },
     { label: "Provably Setting", Icon: MdShield },
-    { label: "Logout", Icon: MdLogout },
+    { label: "Logout", Icon: MdLogout, handler: () => logout() },
   ];
 
   return (
@@ -63,6 +73,7 @@ const NavAutheticated = () => {
         <DropdownMenuContent className="min-w-screen lg:min-w-64 py-3 border border-layer-5 mr-3 mt-2">
           {navItems.map((item) => (
             <DropdownMenuLabel
+              onClick={() => item.handler?.()}
               key={item.label}
               className={`flex items-center text-white/75 text-[16px] font-medium
                   transition-all duration-300 rounded-md
