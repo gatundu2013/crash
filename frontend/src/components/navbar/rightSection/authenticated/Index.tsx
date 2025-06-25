@@ -19,6 +19,7 @@ import {
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { useLogout } from "@/hooks/auth/useLogout";
+import { ROUTES } from "@/routes/Index";
 
 const NavAutheticated = () => {
   const userData = useAuthStore((state) => state.userData);
@@ -29,18 +30,17 @@ const NavAutheticated = () => {
     {
       label: "Wallet",
       Icon: MdAccountBalanceWallet,
-      handler: () => navigate("/wallet"),
+      handler: () => navigate(ROUTES.WALLET),
     },
-    { label: "Game Limits", Icon: MdTrendingUp },
     {
       label: "Bet History",
       Icon: MdHistory,
-      handler: () => navigate("/bethistory"),
+      handler: () => navigate(ROUTES.BET_HISTORY),
     },
     {
       label: "Game Rules",
       Icon: MdStraighten,
-      handler: () => navigate("/gameRules"),
+      handler: () => navigate(ROUTES.GAME_RULES),
     },
     { label: "Provably Setting", Icon: MdShield },
     { label: "Logout", Icon: MdLogout, handler: () => logout() },

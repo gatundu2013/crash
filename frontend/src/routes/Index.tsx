@@ -8,9 +8,19 @@ import Wallet from "@/pages/wallet/Index";
 import BetHistory from "@/pages/betHistory/Index";
 import GameRules from "@/pages/gameRules/Index";
 
+export const ROUTES = {
+  HOME: "/",
+  SIGN_UP: "/signup",
+  SIGN_IN: "/signin",
+  WALLET: "/wallet",
+  BET_HISTORY: "/bethistory",
+  GAME_RULES: "/gameRules",
+  NOT_FOUND: "*",
+};
+
 export const routes = createBrowserRouter([
   {
-    path: "/",
+    path: ROUTES.HOME,
     element: (
       <MainLayout>
         <Outlet />
@@ -18,30 +28,33 @@ export const routes = createBrowserRouter([
     ),
     children: [
       {
-        path: "/",
+        path: ROUTES.HOME,
         element: <Home />,
       },
       {
-        path: "/signup",
+        path: ROUTES.SIGN_UP,
         element: <SignUp />,
       },
       {
-        path: "/signin",
+        path: ROUTES.SIGN_IN,
         element: <SignIn />,
       },
       {
-        path: "/wallet",
+        path: ROUTES.WALLET,
         element: <Wallet />,
       },
       {
-        path: "/bethistory",
+        path: ROUTES.BET_HISTORY,
         element: <BetHistory />,
       },
       {
-        path: "/gameRules",
+        path: ROUTES.GAME_RULES,
         element: <GameRules />,
       },
-      { path: "*", element: <NotFound /> },
+      {
+        path: ROUTES.NOT_FOUND,
+        element: <NotFound />,
+      },
     ],
   },
 ]);

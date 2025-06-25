@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/routes/Index";
 import { useNavigate } from "react-router-dom";
 
 const NavNotAuthenticated = () => {
@@ -7,13 +8,13 @@ const NavNotAuthenticated = () => {
   return (
     <div className="flex gap-3">
       <Button
-        onClick={() => navigate("/signin")}
+        onClick={() => navigate(ROUTES.SIGN_IN)}
         variant={"outline"}
         className="font-bold"
       >
         Sign in
       </Button>
-      <Button onClick={() => navigate("/signup")} className="font-bold">
+      <Button onClick={() => navigate(ROUTES.SIGN_UP)} className="font-bold">
         Sign Up
       </Button>
     </div>
