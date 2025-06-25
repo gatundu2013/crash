@@ -10,11 +10,7 @@ import {
   validateAuthPayload,
 } from "../validations/auth.validation";
 import { handleApiError } from "../utils/apiErrorHandler";
-import { setCookies } from "../utils/authTokens";
-import User from "../models/user.model";
-import { AccountStatus } from "../types/user.types";
-import { AuthError } from "../utils/errors/authError";
-import { formatUserData } from "../utils/userFormatter";
+import { clearCookies, setCookies } from "../utils/authTokens";
 
 export async function registerUserController(req: Request, res: Response) {
   try {
@@ -65,6 +61,11 @@ export async function checkAuthStatus(req: Request, res: Response) {
     console.log(err);
     handleApiError(err, res);
   }
+}
+
+export function logout(req: Request, res: Response) {
+  clearCookies(res);
+  res.status(200).json({ message: "Logged out" });
 }
 
 export async function resetPasswordController(req: Request, res: Response) {}

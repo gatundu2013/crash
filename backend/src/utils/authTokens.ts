@@ -20,3 +20,12 @@ export function setCookies(tokens: { accessToken: string }, res: Response) {
     maxAge: accessTokenMaxAge,
   });
 }
+
+export function clearCookies(res: Response) {
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    secure: false,
+    sameSite: "strict",
+    maxAge: accessTokenMaxAge,
+  });
+}
