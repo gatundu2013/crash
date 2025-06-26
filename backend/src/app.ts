@@ -1,17 +1,18 @@
 import express from "express";
-import dotenv from "dotenv";
 import { connectDb } from "./db";
 import { router } from "./routes/v1";
 import { Server } from "socket.io";
 import { createServer } from "http";
 import { SocketManager } from "./services/socket/socketManager";
 import { corsOptions } from "./config/cors.config";
+import { ENV_VAR, loadEnvVar } from "./config/env.config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-const app = express();
 
+loadEnvVar();
+
+const app = express();
 app.use(cors(corsOptions));
-dotenv.config();
 
 // Add cookie-parser middleware
 app.use(cookieParser());
@@ -30,14 +31,14 @@ const io = new Server(httpServer, {
 
 async function startServer() {
   try {
-    await connectDb(process.env.MONGO_URL!);
+    await connectDb(ENV_VAR.MONGO_URL!);
 
     // Initialize socket connections
     const socketManager = new SocketManager(io);
     socketManager.initializeSocketConnection();
 
-    httpServer.listen(process.env.PORT!, () => {
-      console.log("The server is running on port 4000");
+    httpServer.listen(ENV_VAR.PORT!, () => {
+      console.log(`The server is running on port ${ENV_VAR.PORT}`);
     });
   } catch (err) {
     console.error(err);

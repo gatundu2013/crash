@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { JwtPayloadI } from "../types/auth.types";
+import { ENV_VAR } from "../config/env.config";
 
 export function verifyJwt(req: Request, res: Response, next: NextFunction) {
   try {
@@ -12,13 +13,13 @@ export function verifyJwt(req: Request, res: Response, next: NextFunction) {
 
     const userData = jwt.verify(
       accessToken,
-      process.env.JWT_ACCESS_SECRET!
+      ENV_VAR.JWT_ACCESS_SECRET!
     ) as JwtPayloadI;
 
     req.user = userData;
 
     next();
   } catch (err) {
-    res.status(401).json({ message: "Unauthorized" });
+    res.status(401).json({ message: "Unauthorized", error: err });
   }
 }
