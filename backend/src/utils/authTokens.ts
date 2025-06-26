@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
 import { JwtPayloadI } from "../types/auth.types";
 import { Response } from "express";
+import { JWT_CONFIG } from "../config/env.config";
 
 const accessTokenMaxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export function generateAuthTokens(params: JwtPayloadI) {
-  const accessToken = jwt.sign(params, process.env.JWT_ACCESS_SECRET!, {
+  const accessToken = jwt.sign(params, JWT_CONFIG.ACCESS_SECRET, {
     expiresIn: "7d",
   });
 

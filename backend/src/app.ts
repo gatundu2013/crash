@@ -5,10 +5,10 @@ import { Server } from "socket.io";
 import { createServer } from "http";
 import { SocketManager } from "./services/socket/socketManager";
 import { httpCorsOptions, socketIoConfig } from "./config/cors.config";
-import { ENV_VAR } from "./config/env.config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { gameLifeCycleManager } from "./services/game/gameLifeCycleManager";
+import { SERVER_CONFIG } from "./config/env.config";
 
 const app = express();
 
@@ -22,7 +22,7 @@ const io = new Server(httpServer, socketIoConfig);
 
 async function startServer() {
   try {
-    await connectDb(ENV_VAR.MONGO_URL!);
+    await connectDb(SERVER_CONFIG.MONGO_URL!);
 
     // Initialize socket connections
     const socketManager = new SocketManager(io);
@@ -30,8 +30,12 @@ async function startServer() {
 
     gameLifeCycleManager.startGame(); // start game
 
-    httpServer.listen(ENV_VAR.PORT!, () => {
-      console.log(`The server is running on port ${ENV_VAR.PORT}`);
+    httpServer.listen(SERVER_CONFIG.PORT!, () => {
+      console.log(`
+      ################################################
+       ✅ Server listening on port: ${SERVER_CONFIG.PORT} ✅
+      ################################################
+      `);
     });
   } catch (err) {
     console.error(err);

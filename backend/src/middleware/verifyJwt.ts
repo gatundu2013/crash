@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { JwtPayloadI } from "../types/auth.types";
-import { ENV_VAR } from "../config/env.config";
+import { JWT_CONFIG } from "../config/env.config";
 
 export function verifyJwt(req: Request, res: Response, next: NextFunction) {
   try {
@@ -13,7 +13,7 @@ export function verifyJwt(req: Request, res: Response, next: NextFunction) {
 
     const userData = jwt.verify(
       accessToken,
-      ENV_VAR.JWT_ACCESS_SECRET!
+      JWT_CONFIG.ACCESS_SECRET
     ) as JwtPayloadI;
 
     req.user = userData;
