@@ -1,8 +1,10 @@
 import { CorsOptions } from "cors";
+import { ServerOptions } from "socket.io";
 
-export const allowedOrigins = ["http://localhost:5173"];
+const allowedOrigins = ["http://localhost:5173"];
 
-export const corsOptions: CorsOptions = {
+// http cors
+export const httpCorsOptions: CorsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -11,4 +13,12 @@ export const corsOptions: CorsOptions = {
     }
   },
   credentials: true,
+};
+
+// socket.io cors
+export const socketIoConfig: Partial<ServerOptions> = {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  },
 };
