@@ -7,6 +7,7 @@ import NotFound from "@/pages/NotFound/Index";
 import Wallet from "@/pages/wallet/Index";
 import BetHistory from "@/pages/betHistory/Index";
 import GameRules from "@/pages/gameRules/Index";
+import ProvablyFair from "@/pages/provablyFair/Index";
 
 export const ROUTES = {
   HOME: "/",
@@ -14,7 +15,8 @@ export const ROUTES = {
   SIGN_IN: "/signin",
   WALLET: "/wallet",
   BET_HISTORY: "/bethistory",
-  GAME_RULES: "/gameRules",
+  GAME_RULES: "/game-rules",
+  PROVABLY_FAIR: "/provably-fair",
   NOT_FOUND: "*",
 };
 
@@ -50,6 +52,10 @@ export const routes = createBrowserRouter([
       {
         path: ROUTES.GAME_RULES,
         element: <GameRules />,
+      },
+      {
+        path: ROUTES.PROVABLY_FAIR,
+        element: <ProvablyFair />,
       },
       {
         path: ROUTES.NOT_FOUND,

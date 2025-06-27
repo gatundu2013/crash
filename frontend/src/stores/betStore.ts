@@ -73,7 +73,7 @@ const createBetStore = (storeId: string) => {
     // Actions
     placeBet: () => {
       const { stake, hasAutoCashout, autoCashoutValue } = get();
-      const { isAuthenticated, userData } = useAuthStore.getState();
+      const { isAuthenticated, userData, clientSeed } = useAuthStore.getState();
       const socket = useSocketStore.getState().socket;
 
       if (!isAuthenticated || !userData) {
@@ -90,7 +90,7 @@ const createBetStore = (storeId: string) => {
         stake,
         autoCashoutMultiplier: hasAutoCashout ? autoCashoutValue : null,
         userId: userData.userId,
-        clientSeed: null,
+        clientSeed: clientSeed,
         username: userData.username,
         storeId,
       };

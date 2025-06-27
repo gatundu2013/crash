@@ -82,4 +82,5 @@ export interface BroadcastCashoutRes {
 export interface OnConnectData {
   topStakers: TopStaker[];
   previousMultipliers: PreviousMultiplier[];
+  hashedServerSeed: string;
 }

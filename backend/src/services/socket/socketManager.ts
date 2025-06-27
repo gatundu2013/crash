@@ -42,6 +42,8 @@ export class SocketManager {
       socket.emit(SOCKET_EVENTS.EMITTERS.ON_CONNECT_DATA, {
         topStakers: roundStateManager.getState().topStakers,
         previousMultipliers: roundStateManager.getState().previousMultipliers,
+        hashedServerSeed:
+          roundStateManager.getState().provablyFairOutcome?.hashedServerSeed,
       });
     });
   }

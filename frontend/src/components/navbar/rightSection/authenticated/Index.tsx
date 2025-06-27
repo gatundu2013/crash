@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Avatar1 from "../../../../assets/avatar.png";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import {
   MdShield,
   MdHistory,
   MdStraighten,
-  MdTrendingUp,
   MdLogout,
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +25,12 @@ const NavAutheticated = () => {
   const userData = useAuthStore((state) => state.userData);
   const { logout } = useLogout();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  const handleNavigate = (handler: () => void) => {
+    handler();
+    setOpen(false);
+  };
 
   const navItems = [
     {
@@ -42,12 +48,20 @@ const NavAutheticated = () => {
       Icon: MdStraighten,
       handler: () => navigate(ROUTES.GAME_RULES),
     },
-    { label: "Provably Setting", Icon: MdShield },
-    { label: "Logout", Icon: MdLogout, handler: () => logout() },
+    {
+      label: "Provably Setting",
+      Icon: MdShield,
+      handler: () => navigate(ROUTES.PROVABLY_FAIR),
+    },
+    {
+      label: "Logout",
+      Icon: MdLogout,
+      handler: () => logout(),
+    },
   ];
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <div className="flex items-center gap-2 bg-layer-4 px-2 py-1 rounded-md hover:bg-layer-5 transition-colors cursor-pointer">
         <RiWallet3Line className="text-green-1" />
         <div>
@@ -62,26 +76,26 @@ const NavAutheticated = () => {
       <Button
         variant="default"
         size="sm"
-        className="font-medium hidden md:block"
+        className="font-medium"
+        onClick={() => navigate(ROUTES.WALLET)}
       >
         Deposit
       </Button>
 
-      <DropdownMenu>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger className="cursor-pointer">
           <Avatar className="border-2 border-green-1 h-10 w-10">
             <AvatarImage src={Avatar1} alt="User avatar" />
             <AvatarFallback className="bg-layer-4">AV</AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
+
         <DropdownMenuContent className="min-w-screen lg:min-w-64 py-3 border border-layer-5 mr-3 mt-2">
           {navItems.map((item) => (
             <DropdownMenuLabel
-              onClick={() => item.handler?.()}
+              onClick={() => handleNavigate(item.handler)}
               key={item.label}
-              className={`flex items-center text-white/75 text-[16px] font-medium
-                  transition-all duration-300 rounded-md
-                  text-sm cursor-pointer py-2 hover:bg-white/10 hover:text-white`}
+              className="flex items-center text-white/75 text-[16px] font-medium transition-all duration-300 rounded-md text-sm cursor-pointer py-2 hover:bg-white/10 hover:text-white"
             >
               <item.Icon className="mr-2 size-6" />
               {item.label}

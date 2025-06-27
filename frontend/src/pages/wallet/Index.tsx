@@ -17,7 +17,7 @@ const Wallet = () => {
   );
 
   return (
-    <div className="w-full h-full space-y-3 max-w-[500px] mx-auto rounded-md py-3">
+    <div className="w-full h-full space-y-3 max-w-[450px] mx-auto rounded-md py-3">
       <div className="flex flex-col items-center gap-2">
         <div className="w-12 h-12 rounded-full bg-green-200/20 flex items-center justify-center shadow-inner">
           <img

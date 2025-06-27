@@ -94,6 +94,7 @@ const useGameStore = create<GameStoreI>((set) => ({
     set({
       topStakers: data.topStakers || [],
       previousMultipliers: data.previousMultipliers || [],
+      hashedServerSeed: data.hashedServerSeed,
     });
   },
 }));

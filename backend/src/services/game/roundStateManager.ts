@@ -1,11 +1,10 @@
 import { io } from "../../app";
-import { GAME_CONFIG } from "../../config/game.config";
+import { GAME_CONFIG } from "../../config/env.config";
 import { SOCKET_EVENTS } from "../../config/socketEvents.config";
 import {
   AcceptedBet,
   BetInMemory,
   BetStatus,
-  BetWithAutoCashout,
   StagedCashout,
   TopStaker,
 } from "../../types/bet.types";
