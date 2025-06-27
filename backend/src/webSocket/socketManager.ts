@@ -1,9 +1,9 @@
 import { Server, Socket } from "socket.io";
-import { bettingManager } from "../betting/bettingManager";
-import { SOCKET_EVENTS } from "../../config/socketEvents.config";
-import { BettingPayload, CashoutPayload } from "../../types/bet.types";
-import { cashoutManager } from "../betting/cashoutManager";
-import { roundStateManager } from "../game/roundStateManager";
+import { BettingPayload, CashoutPayload } from "../types/bet.types";
+import { SOCKET_EVENTS } from "../config/socketEvents.config";
+import { bettingManager } from "../services/betting/bettingManager";
+import { cashoutManager } from "../services/betting/cashoutManager";
+import { roundStateManager } from "../services/game/roundStateManager";
 
 export class SocketManager {
   private io: Server;

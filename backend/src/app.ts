@@ -3,12 +3,12 @@ import { connectDb } from "./db";
 import { router } from "./routes/v1";
 import { Server } from "socket.io";
 import { createServer } from "http";
-import { SocketManager } from "./services/socket/socketManager";
 import { httpCorsOptions, socketIoConfig } from "./config/cors.config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { gameLifeCycleManager } from "./services/game/gameLifeCycleManager";
 import { SERVER_CONFIG } from "./config/env.config";
+import { SocketManager } from "./webSocket/socketManager";
 
 const app = express();
 
