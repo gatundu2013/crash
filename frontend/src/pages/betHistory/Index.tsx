@@ -1,34 +1,58 @@
 import HistoryImg from "../../assets/history.png";
 import { format } from "date-fns";
+import useFetch from "@/hooks/useFetch";
+import { useEffect, useState, useRef } from "react";
+import type { GetBetHistoryRes } from "@/types/betHistory.types";
+import { API_ROUTES } from "@/config/apiRoutes.config";
+import useAuthStore from "@/stores/authStore";
+import { SubmitButton } from "@/components/forms";
+import Avatar from "../../assets/avatar.png";
+import { toast } from "react-toastify";
 
 const BetHistory = () => {
-  const bets = [
-    {
-      betId: "8db29bc4-bbe6-41c2-8aea-a80147132885",
-      roundId: "1e4d9555-5f3f-42ea-b58e-7bb408ba5479",
-      stake: 10,
-      payout: 12,
-      cashoutMultiplier: 1.2,
-      finalMultiplier: null,
-      autoCashoutMultiplier: 1.2,
-      createdAt: "2025-06-22T13:16:12.177Z",
-    },
-    {
-      betId: "b1",
-      roundId: "r1",
-      stake: 10,
-      payout: null,
-      cashoutMultiplier: 1.2,
-      finalMultiplier: null,
-      autoCashoutMultiplier: 1.2,
-      createdAt: "2025-06-22T13:16:12.177Z",
-    },
-  ];
+  const { isLoading, getData } = useFetch();
+  const [bets, setBets] = useState<GetBetHistoryRes[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId = useAuthStore((state) => state.userData?.userId);
+  const hasInitialLoadRef = useRef(false); // Prevents duplicate initial loads
+
+  async function fetchPaginatedBetHistory(isInitialLoad = false) {
+    if (isAuthenticated && userId) {
+      const resp = await getData(
+        API_ROUTES.BET_HISTORY.PAGINATED_HISTORY({
+          userId,
+          page: currentPage,
+        })
+      );
+
+      const data: GetBetHistoryRes[] = resp.betHistories;
+
+      if (isInitialLoad) {
+        setBets(data);
+      } else {
+        if (data.length === 0) {
+          toast.info("No more");
+          return;
+        }
+        setBets((prev) => [...prev, ...data]);
+        setCurrentPage((prev) => prev + 1);
+      }
+    }
+  }
+
+  // Fetch first page on initial load
+  useEffect(() => {
+    if (isAuthenticated && bets.length === 0 && !hasInitialLoadRef.current) {
+      hasInitialLoadRef.current = true;
+      fetchPaginatedBetHistory(true);
+    }
+  }, [isAuthenticated]);
 
   return (
-    <div className="max-w-[550px] mx-auto relative flex flex-col space-y-1">
+    <div className="max-w-[550px] mx-auto relative flex flex-col pb-4">
       {/* Header */}
-      <div className="sticky top-[62px] z-10 bg-layer-1 pt-4 pb-2 space-y-2">
+      <div className="sticky top-[62px] z-10 bg-layer-1 pb-2 space-y-2">
         <div className="flex flex-col items-center">
           <div className="w-9 h-9">
             <img
@@ -49,17 +73,29 @@ const BetHistory = () => {
       </div>
 
       {/* Bet Rows */}
-      <div className="flex flex-col space-y-2">
-        {bets.map((bet) => {
-          let date: string | null = null;
-          let time: string | null = null;
-          let dateObj: Date | null = null;
+      <div className="flex flex-col space-y-2 mb-3">
+        {/* Loading state (first load only) */}
+        {isLoading && bets.length === 0 && (
+          <p className="text-center text-white/70 text-sm">Loading...</p>
+        )}
 
-          if (bet.createdAt) {
-            dateObj = new Date(bet.createdAt);
-            date = format(dateObj, "dd/MM/yyyy");
-            time = format(dateObj, "HH:mm:ss");
-          }
+        {/* No bets found */}
+        {!isLoading && bets.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-10 text-white/60">
+            <img
+              src={Avatar}
+              alt="No history"
+              className="w-16 h-16 object-contain opacity-50 mb-3"
+            />
+            <p className="text-sm">No bet history</p>
+          </div>
+        )}
+
+        {/* List of bets */}
+        {bets.map((bet, index) => {
+          const dateObj = new Date(bet.createdAt);
+          const date = format(dateObj, "dd/MM/yyyy");
+          const time = format(dateObj, "HH:mm:ss");
 
           const stake = bet.stake?.toFixed(2) ?? "-";
           const multiplier =
@@ -71,14 +107,14 @@ const BetHistory = () => {
 
           return (
             <div
-              key={`${bet.betId}-${bet.roundId}`}
               className={`grid grid-cols-4 gap-4 items-center text-xs px-2 rounded-lg py-1 font-semibold ${
                 isWin
                   ? "bg-green-500/10 text-green-500"
                   : "bg-white/5 text-white/90"
               }`}
+              key={index}
             >
-              <div className="flex flex-col leading-tight space-y-0.5 ">
+              <div className="flex flex-col leading-tight space-y-0.5">
                 <span className="text-white/65">{date}</span>
                 <span>{time}hrs</span>
               </div>
@@ -90,6 +126,17 @@ const BetHistory = () => {
           );
         })}
       </div>
+
+      {/* Load More button */}
+      {bets.length > 0 && (
+        <SubmitButton
+          className="self-center"
+          isLoading={isLoading}
+          onClick={() => fetchPaginatedBetHistory(false)}
+        >
+          Load More
+        </SubmitButton>
+      )}
     </div>
   );
 };
