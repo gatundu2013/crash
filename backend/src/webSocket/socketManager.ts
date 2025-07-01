@@ -7,6 +7,7 @@ import { SOCKET_EVENTS } from "../config/socketEvents.config";
 import { bettingManager } from "../services/game/gameEngine/bettingManager";
 import { cashoutManager } from "../services/game/gameEngine/cashoutManager";
 import { roundStateManager } from "../services/game/gameEngine/roundStateManager";
+import { OnConnectRes } from "../types/shared/socketIo/gameTypes";
 
 export class SocketManager {
   private io: Server;
@@ -46,8 +47,8 @@ export class SocketManager {
         topStakers: roundStateManager.getState().topStakers,
         previousMultipliers: roundStateManager.getState().previousMultipliers,
         hashedServerSeed:
-          roundStateManager.getState().provablyFairOutcome?.hashedServerSeed,
-      } satisfies number);
+          roundStateManager.getState().provablyFairOutcome?.hashedServerSeed!,
+      } satisfies OnConnectRes);
     });
   }
 }

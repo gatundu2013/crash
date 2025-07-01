@@ -1,7 +1,7 @@
 import { Schema, Document } from "mongoose";
 import { RoundAnalyticsI } from "../types/backend/roundAnalytics.types";
-import { ClientSeedDetails } from "../types/backend/game.types";
 import { model } from "mongoose";
+import { ClientSeedDetails } from "../types/shared/socketIo/gameTypes";
 
 export interface RoundAnalyticsDocument extends RoundAnalyticsI, Document {}
 

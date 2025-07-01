@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { JwtPayloadI } from "../types/auth.types";
 import { JWT_CONFIG } from "../config/env.config";
 import { AuthError } from "../utils/errors/authError";
 import { handleApiError } from "../utils/apiErrorHandler";
+import { JwtPayloadI } from "../types/backend/authTypes";
 
 export function verifyJwt(req: Request, res: Response, next: NextFunction) {
   try {

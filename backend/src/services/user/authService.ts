@@ -1,13 +1,13 @@
 import User from "../../models/user.model";
-import { LoginRequest, RegisterRequest } from "../../types/auth.types";
 import bcrypt from "bcrypt";
 import { generateAuthTokens } from "../../utils/authTokens";
 import { AuthError } from "../../utils/errors/authError";
 import { formatUserData } from "../../utils/userFormatter";
 import { AccountStatus } from "../../types/backend/userTypes";
 import { v4 as uuidv4 } from "uuid";
+import { LoginReq, RegisterReq } from "../../types/shared/api/authTypes";
 
-export async function registerService(params: RegisterRequest) {
+export async function registerService(params: RegisterReq) {
   const { phoneNumber, username, password, agreeToTerms } = params;
 
   const phoneNumberExist = await User.findOne({ phoneNumber }).lean();
@@ -50,7 +50,7 @@ export async function registerService(params: RegisterRequest) {
   return { authTokens, userData };
 }
 
-export async function loginService(params: LoginRequest) {
+export async function loginService(params: LoginReq) {
   const { phoneNumber, password } = params;
 
   const user = await User.findOne({ phoneNumber }).lean();

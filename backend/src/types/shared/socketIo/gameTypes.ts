@@ -1,3 +1,5 @@
+import { TopStakers } from "./betTypes";
+
 /**
  * ...... GLOBALS ......
  */
@@ -57,4 +59,10 @@ export interface EndPhaseRes {
 export interface GamePhaseErrorRes {
   gamePhase: GamePhase.ERROR;
   message: string;
+}
+
+export interface OnConnectRes {
+  topStakers: TopStakers[];
+  previousMultipliers: PreviousMultiplier[];
+  hashedServerSeed: string;
 }

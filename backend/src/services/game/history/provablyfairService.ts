@@ -1,4 +1,5 @@
 import RoundAnalyticsModel from "../../../models/roundAnalytics.model";
+import { ProvablyFairOutcomeI } from "../../../types/shared/socketIo/gameTypes";
 import { AppError } from "../../../utils/errors/appError";
 
 export async function getProvablyFairResultService(roundId: string) {
@@ -16,7 +17,7 @@ export async function getProvablyFairResultService(roundId: string) {
       });
     }
 
-    delete result?.provablyFairOutcome?.rawMultiplier;
+    delete (result as any)?.provablyFairOutcome?.rawMultiplier;
 
     return result;
   } catch (err) {
