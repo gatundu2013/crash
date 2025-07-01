@@ -1,37 +1,35 @@
 import crypto from "crypto";
-import { GAME_CONFIG } from "../../config/game.config";
-import { ClientSeedDetails } from "../../types/game.types";
+import { GAME_CONFIG } from "../../../config/env.config";
+import { ClientSeedDetails } from "../../../types/shared/socketIo/gameTypes";
+import { toFixedDecimals } from "../../../utils/toFixedDecimals";
 
-interface MultiplierGeneratorDep {
+export interface MultiplierGeneratorDep {
   clientSeed: string;
   clientSeedDetails: ClientSeedDetails[] | [];
 }
 
 /**
- * Provably fair multiplier generator for gambling/gaming applications.
- * Uses client and server seeds to generate verifiable random multipliers.
+ * Provably Fair multiplier generator
+ *
+ * This class combines server and client seed to generate crytographically secure multpliers
  */
 class MultiplierGenerator {
   private clientSeedDetails: ClientSeedDetails[] | [];
-  private clientSeed: null | string;
-  private serverSeed: null | string;
-  private hashedServerSeed: null | string;
-  private gameHash: null | string;
-  private rawMultiplier: null | number;
-  private finalMultiplier: null | number;
-  private decimal: null | number;
+  private clientSeed: string | null;
+  private serverSeed: string | null;
+  private hashedServerSeed: string | null;
+  private gameHash: string | null;
+  private rawMultiplier: number | null;
+  private finalMultiplier: number | null;
+  private decimal: number | null;
 
-  /**
-   * @param {Object} params - Constructor parameters
-   * @param {string} params.clientSeed - Client-provided seed for randomness
-   */
   constructor({ clientSeed, clientSeedDetails }: MultiplierGeneratorDep) {
-    if (!GAME_CONFIG.CLIENT_SEED_REGEX.test(clientSeed)) {
-      this.clientSeed = GAME_CONFIG.DEFAULT_CLIENT_SEED;
-      this.clientSeedDetails = [];
-    } else {
+    if (GAME_CONFIG.CLIENT_SEED_REGEX.test(clientSeed)) {
       this.clientSeed = clientSeed;
       this.clientSeedDetails = clientSeedDetails;
+    } else {
+      this.clientSeed = GAME_CONFIG.DEFAULT_CLIENT_SEED;
+      this.clientSeedDetails = [{ seed: this.clientSeed, username: "server" }];
     }
 
     this.serverSeed = null;
@@ -44,7 +42,6 @@ class MultiplierGenerator {
 
   /**
    * Generates a random server seed and its SHA256 hash
-   * @private
    */
   private generateServerSeed() {
     this.serverSeed = crypto.randomBytes(32).toString("base64");
@@ -56,7 +53,6 @@ class MultiplierGenerator {
 
   /**
    * Creates a combined hash from server and client seeds
-   * @private
    */
   private generateGameHash() {
     const combinedSeeds = `${this.serverSeed}${this.clientSeed}`;
@@ -69,7 +65,6 @@ class MultiplierGenerator {
   /**
    * Calculates multiplier from hash: converts hex to decimal, normalizes to 0-1,
    * inverts for multiplier, applies house edge, and enforces min/max bounds
-   * @private
    */
   private calculateMultiplier() {
     // Get configuration values for multiplier calculation
@@ -103,15 +98,12 @@ class MultiplierGenerator {
 
     // Store results rounded to 2 decimal places
     this.decimal = hashPrefixInDecimal;
-    this.rawMultiplier = parseFloat(rawMultiplier.toFixed(2));
-    this.finalMultiplier = parseFloat(finalMultiplier.toFixed(2));
-
-    console.log(this.finalMultiplier);
+    this.rawMultiplier = parseFloat(toFixedDecimals(rawMultiplier));
+    this.finalMultiplier = parseFloat(toFixedDecimals(finalMultiplier));
   }
 
   /**
    * Generates complete game results with all seeds and multipliers
-   * @returns {Object} Game result containing seeds, hash, and multipliers
    */
   public generateProvablyFairResults() {
     this.generateServerSeed();
@@ -131,9 +123,15 @@ class MultiplierGenerator {
   }
 }
 
+/**
+ * Statistical analysis tool for multiplier distributions
+ */
 class MultiplierStats {
   private multipliers: number[];
 
+  /**
+   * Predefined multiplier ranges for statistical analysis
+   */
   static ranges = [
     { name: "1.00x - 1.99x", min: 1, max: 1.99 },
     { name: "2.00x - 2.99x", min: 2, max: 2.99 },
@@ -151,7 +149,10 @@ class MultiplierStats {
     this.multipliers = [];
   }
 
-  generateMultipliers(numOfRounds: number = 100) {
+  /**
+   * Generates multiple multipliers for statistical analysis
+   */
+  public generateMultipliers(numOfRounds: number = 100) {
     this.multipliers = [];
 
     for (let i = 0; i < numOfRounds; i++) {
@@ -167,7 +168,10 @@ class MultiplierStats {
     }
   }
 
-  calculateRangeDistribution() {
+  /**
+   * Calculates distribution of multipliers across predefined ranges
+   */
+  private calculateRangeDistribution() {
     const distribution: {
       [range: string]: { count: number; percentage: number };
     } = {};
@@ -200,7 +204,6 @@ class MultiplierStats {
 
   /**
    * Get a comprehensive statistical report
-   * @returns Object containing all calculated statistics
    */
   public getStats() {
     return {

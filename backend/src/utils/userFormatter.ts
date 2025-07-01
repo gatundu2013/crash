@@ -1,4 +1,4 @@
-import { UserI } from "../types/user.types";
+import { UserI } from "../types/backend/userTypes";
 
 /**
  * Returns formatted user data for client responses

@@ -1,18 +1,13 @@
-import User from "../models/user.model";
-import {
-  LoginRequest,
-  RegisterRequest,
-  RequestOtp,
-  ResetPasswordRequest,
-} from "../types/auth.types";
+import User from "../../models/user.model";
+import { LoginRequest, RegisterRequest } from "../../types/auth.types";
 import bcrypt from "bcrypt";
-import { generateAuthTokens } from "../utils/authTokens";
-import { AuthError } from "../utils/errors/authError";
-import { formatUserData } from "../utils/userFormatter";
-import { AccountStatus } from "../types/user.types";
+import { generateAuthTokens } from "../../utils/authTokens";
+import { AuthError } from "../../utils/errors/authError";
+import { formatUserData } from "../../utils/userFormatter";
+import { AccountStatus } from "../../types/backend/userTypes";
 import { v4 as uuidv4 } from "uuid";
 
-export async function registerUserService(params: RegisterRequest) {
+export async function registerService(params: RegisterRequest) {
   const { phoneNumber, username, password, agreeToTerms } = params;
 
   const phoneNumberExist = await User.findOne({ phoneNumber }).lean();
@@ -55,7 +50,7 @@ export async function registerUserService(params: RegisterRequest) {
   return { authTokens, userData };
 }
 
-export async function loginUserService(params: LoginRequest) {
+export async function loginService(params: LoginRequest) {
   const { phoneNumber, password } = params;
 
   const user = await User.findOne({ phoneNumber }).lean();
@@ -85,12 +80,10 @@ export async function loginUserService(params: LoginRequest) {
 
   const userData = formatUserData(user);
 
-  console.log(userData);
-
   return { authTokens, userData };
 }
 
-export async function getUserAuthStatus(userId: string) {
+export async function getAuthStatusService(userId: string) {
   const user = await User.findOne({ userId: userId }).lean();
 
   if (user?.accountStatus !== AccountStatus.ACTIVE) {
@@ -105,7 +98,3 @@ export async function getUserAuthStatus(userId: string) {
 
   return { userData };
 }
-
-export async function resetUserPasswordService(params: ResetPasswordRequest) {}
-
-export async function requestOtpService(params: RequestOtp) {}

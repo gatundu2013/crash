@@ -1,10 +1,20 @@
 import { Router } from "express";
-import authRouter from "./auth.router";
-import betHistory from "./betHistory.router";
+import { verifyJwt } from "../../../middleware/verifyJwt";
+import {
+  checkAuthStatusController,
+  loginController,
+  logoutController,
+  registerController,
+} from "../../../controllers/user/authController";
+import { getPaginatedBetHistoryController } from "../../../controllers/user/betHistoryController";
 
-const userRouter = Router();
+export const userRouter = Router();
 
-userRouter.use("/auth", authRouter);
-userRouter.use("/history", betHistory);
+// Auth routes
+userRouter.post("/auth/signup", registerController);
+userRouter.post("/auth/signin", loginController);
+userRouter.post("/auth/logout", logoutController);
+userRouter.get("/auth/status", verifyJwt, checkAuthStatusController);
 
-export default userRouter;
+// Bet history routes
+userRouter.get("/bets", verifyJwt, getPaginatedBetHistoryController);

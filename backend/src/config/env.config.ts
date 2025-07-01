@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
-import { GameConfig } from "../types/game.types";
+import { GameConfig } from "../types/backend/game.types";
 
 // Load the appropriate .env file
 const env = process.env.NODE_ENV || "development";

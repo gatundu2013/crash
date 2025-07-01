@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { AccountStatus, Role, UserI } from "../types/user.types";
+import { AccountStatus, Role, UserI } from "../types/backend/userTypes";
 
 const userSchema = new Schema<UserI>({
   userId: { type: String, required: true, unique: true },

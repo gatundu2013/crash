@@ -1,14 +1,14 @@
-import { SOCKET_EVENTS } from "../../config/socketEvents.config";
+import { SOCKET_EVENTS } from "../../../config/socketEvents.config";
 import { v4 as uuidv4 } from "uuid";
-import User from "../../models/user.model";
+import User from "../../../models/user.model";
 import mongoose, { AnyBulkWriteOperation } from "mongoose";
-import { AccountStatus } from "../../types/user.types";
-import { EVENT_NAMES, eventBus } from "../game/eventBus";
-import { bettingSchema } from "../../validations/betting.validation";
-import { BettingError } from "../../utils/errors/bettingError";
-import { AppError } from "../../utils/errors/appError";
+import { AccountStatus } from "../../../types/backend/userTypes";
+import { EVENT_NAMES, eventBus } from "./eventBus";
+import { bettingSchema } from "../../../validations/betting.validation";
+import { BettingError } from "../../../utils/errors/bettingError";
+import { AppError } from "../../../utils/errors/appError";
 import { MongoError } from "mongodb";
-import BetHistory, { BetHistoryI } from "../../models/betHistory.model";
+import BetHistory, { BetHistoryI } from "../../../models/betHistory.model";
 import {
   AcceptedBet,
   BatchLogsParams,
@@ -19,8 +19,12 @@ import {
   StageBetParams,
   StagedBet,
   ValidateBetsParams,
-} from "../../types/bet.types";
-import { GameError } from "../../utils/errors/gameError";
+} from "../../../types/backend/bet.types";
+import { GameError } from "../../../utils/errors/gameError";
+import {
+  UserPlaceBetErrorRes,
+  UserPlaceBetSuccessRes,
+} from "../../../types/shared/socketIo/betTypes";
 
 /**
  * BettingManager handles all bet placement operations by grouping bets and processing them in batches.
@@ -75,7 +79,7 @@ class BettingManager {
    * This is the main entry point for all incoming bets.
    * @throws {BettingError} When validation fails or business rules are violated
    */
-  public async stageBet(params: StageBetParams): Promise<void> {
+  public async stageBet(params: StageBetParams) {
     const { payload, socket } = params;
 
     try {
@@ -168,7 +172,7 @@ class BettingManager {
    * - User grouping to reduce duplicate balance queries
    * - Transaction-scoped operations for data consistency
    */
-  private async processBatch(): Promise<void> {
+  private async processBatch() {
     // Prevent concurrent batch processing
     if (this.isProcessing) {
       return;
@@ -279,10 +283,10 @@ class BettingManager {
         eventBus.emit(EVENT_NAMES.ACCEPTED_BETS, validatedBets);
 
         break; // Success - exit retry loop
-      } catch (error) {
+      } catch (err) {
         console.error(
           `[BettingManager] Batch processing failed on attempt ${attempt}:`,
-          error
+          err
         );
 
         // Rollback transaction on any error
@@ -298,8 +302,7 @@ class BettingManager {
         }
 
         // Check if this is a retryable WriteConflict error (MongoDB optimistic locking)
-        const isWriteConflict =
-          error instanceof MongoError && error.code === 112;
+        const isWriteConflict = err instanceof MongoError && err.code === 112;
 
         if (isWriteConflict && attempt < this.config.MAX_RETRIES) {
           const backoffTime = this.config.BASE_BACKOFF_MS * attempt;
@@ -367,10 +370,7 @@ class BettingManager {
    *
    * @returns Object containing the extracted batch array and user-grouped bet data
    */
-  private extractAndGroupBets(): {
-    batch: StagedBet[];
-    groupedUserBets: Map<string, GroupedUserBets>;
-  } {
+  private extractAndGroupBets() {
     // Extract a batch of bets limited by configuration
     const batch: StagedBet[] = Array.from(this.stagedBets.values()).slice(
       0,
@@ -421,11 +421,7 @@ class BettingManager {
    *
    * @returns Object containing validated bets, failed bets, and prepared database operations
    */
-  private validateBetsAndPrepareOperations(params: ValidateBetsParams): {
-    validatedBets: AcceptedBet[];
-    failedBets: FailedBetInfo[];
-    balanceUpdateOps: AnyBulkWriteOperation[];
-  } {
+  private validateBetsAndPrepareOperations(params: ValidateBetsParams) {
     const { groupedUserBets, userAccountBalances } = params;
 
     const balanceUpdateOps: AnyBulkWriteOperation[] = [];
@@ -547,9 +543,9 @@ class BettingManager {
       console.info(
         `[BettingManager] ${betHistoryResult.length} bet history records inserted. ${balanceUpdateResult.modifiedCount} account balances updated.`
       );
-    } catch (error) {
-      console.error("[BettingManager] Database operations failed:", error);
-      throw error; // Re-throw to trigger transaction rollback
+    } catch (err) {
+      console.error("[BettingManager] Database operations failed:", err);
+      throw err; // Re-throw to trigger transaction rollback
     }
   }
 
@@ -575,26 +571,22 @@ class BettingManager {
 
     acceptedBets.forEach((bet) => {
       try {
-        const response = {
-          betId: bet.payload.betId,
-          accountBalance: bet.newAccountBalance,
-          roundId: this.currentRoundId,
-          timestamp: new Date().toISOString(),
-        };
-
         if (bet.socket && bet.socket.connected) {
           bet.socket.emit(
             SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_SUCCESS(
               bet.payload.storeId
             ),
-            response
+            {
+              betId: bet.payload.betId,
+              accountBalance: bet.newAccountBalance,
+            } satisfies UserPlaceBetSuccessRes
           );
           notificationsSent++;
         }
-      } catch (error) {
+      } catch (err) {
         console.error(
           `[BettingManager] Failed to notify client for bet ${bet.payload.betId}:`,
-          error
+          err
         );
       }
     });
@@ -626,20 +618,19 @@ class BettingManager {
       try {
         const response = {
           message: reason,
-          timestamp: new Date().toISOString(),
         };
 
         if (socket && socket.connected) {
-          socket.emit(
-            SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR(storeId),
-            response
-          );
+          socket.emit(SOCKET_EVENTS.EMITTERS.BETTING.PLACE_BET_ERROR(storeId), {
+            message: reason,
+          } satisfies UserPlaceBetErrorRes);
+
           notificationsSent++;
         }
-      } catch (error) {
+      } catch (err) {
         console.error(
           "[BettingManager] Failed to send error notification:",
-          error
+          err
         );
       }
     });
@@ -732,10 +723,10 @@ class BettingManager {
       this.stagedBets.size > 0
     ) {
       this.debounceTimerId = setTimeout(() => {
-        this.processBatch().catch((error) => {
+        this.processBatch().catch((err) => {
           console.error(
             "[BettingManager] Scheduled batch processing failed:",
-            error
+            err
           );
         });
       }, this.config.DEBOUNCE_TIME_MS);
@@ -881,7 +872,6 @@ class BettingManager {
           isOperational: false,
         });
       }
-
       return results;
     } catch (err) {
       throw err;

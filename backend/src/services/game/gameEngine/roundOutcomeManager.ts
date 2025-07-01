@@ -1,14 +1,14 @@
 import mongoose from "mongoose";
-import RoundAnalyticsModel from "../../models/roundAnalytics.model";
-import { GamePhase } from "../../types/game.types";
+import RoundAnalyticsModel from "../../../models/roundAnalytics.model";
 import {
   FinancialsData,
   RoundAnalyticsI,
-} from "../../types/roundAnalytics.types";
-import { GameError } from "../../utils/errors/gameError";
-import { bettingManager } from "../betting/bettingManager";
+} from "../../../types/backend/roundAnalytics.types";
+import { GameError } from "../../../utils/errors/gameError";
+import { bettingManager } from "./bettingManager";
+import { GamePhase } from "../../../types/shared/socketIo/gameTypes";
 
-class RoundAnalyticsManager {
+class RoundoutcomeManager {
   private readonly config = {
     maxRetries: 3,
     baseDelayMs: 1000,
@@ -20,15 +20,19 @@ class RoundAnalyticsManager {
   async saveCompleteRoundResultsWithRetries(
     roundData: RoundAnalyticsI
   ): Promise<void> {
-    let retries = 1;
+    let retries = 0;
 
-    while (retries <= this.config.maxRetries) {
+    while (retries < this.config.maxRetries) {
       try {
+        let roundCount = await RoundAnalyticsModel.countDocuments();
+        roundCount++;
+
         const newRoundAnalytics = new RoundAnalyticsModel({
           roundId: roundData.roundId,
           totalPlayers: roundData.totalPlayers,
           roundPhase: roundData.roundPhase,
           provablyFairOutcome: roundData.provablyFairOutcome,
+          roundCount,
           financial: {
             houseProfit: 0,
             totalBetAmount: roundData.financial.totalBetAmount,
@@ -197,4 +201,4 @@ class RoundAnalyticsManager {
   }
 }
 
-export default RoundAnalyticsManager;
+export default RoundoutcomeManager;

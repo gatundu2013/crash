@@ -8,17 +8,21 @@ import {
   PrepareCashoutOperationsParams,
   StageCashoutParams,
   StagedCashout,
-} from "../../types/bet.types";
-import { roundStateManager } from "../game/roundStateManager";
-import { SOCKET_EVENTS } from "../../config/socketEvents.config";
-import User from "../../models/user.model";
-import BetHistory, { BetHistoryI } from "../../models/betHistory.model";
+} from "../../../types/backend/bet.types";
+import { roundStateManager } from "./roundStateManager";
+import { SOCKET_EVENTS } from "../../../config/socketEvents.config";
+import User from "../../../models/user.model";
+import BetHistory, { BetHistoryI } from "../../../models/betHistory.model";
 import mongoose, { AnyBulkWriteOperation } from "mongoose";
-import { cashoutSchema } from "../../validations/betting.validation";
-import { CashoutError } from "../../utils/errors/cashoutError";
-import { AppError } from "../../utils/errors/appError";
+import { cashoutSchema } from "../../../validations/betting.validation";
+import { CashoutError } from "../../../utils/errors/cashoutError";
+import { AppError } from "../../../utils/errors/appError";
 import { MongoError } from "mongodb";
-import { EVENT_NAMES, eventBus } from "../game/eventBus";
+import { EVENT_NAMES, eventBus } from "./eventBus";
+import {
+  UserCashoutErrorRes,
+  UserCashoutSuccessRes,
+} from "../../../types/shared/socketIo/betTypes";
 
 /**
  * CashoutManager handles all cashout operations in batches.
@@ -54,7 +58,7 @@ class CashoutManager {
    * These values are tuned for production workloads and can be adjusted based on system capacity.
    */
   private readonly config = {
-    MAX_BATCH_SIZE: 212, // Maximum number of cashouts to process in a single batch
+    MAX_BATCH_SIZE: 256, // Maximum number of cashouts to process in a single batch
     DEBOUNCE_TIME_MS: 500, // Delay to allow cashout accumulation before processing
     MAX_RETRIES: 3, // Maximum retry attempts for failed database transactions
     BASE_BACKOFF_MS: 100, // Base delay for exponential backoff retry strategy
@@ -297,10 +301,10 @@ class CashoutManager {
 
         // Success - break out of retry loop
         break;
-      } catch (error) {
+      } catch (err) {
         console.error(
           `[CashoutManager] Batch processing failed on attempt ${attempt}/${this.config.MAX_RETRIES}:`,
-          error
+          err
         );
 
         // Rollback transaction on any error to maintain data consistency
@@ -316,8 +320,7 @@ class CashoutManager {
         }
 
         // Check if this is a retryable WriteConflict error (MongoDB optimistic locking)
-        const isWriteConflict =
-          error instanceof MongoError && error.code === 112;
+        const isWriteConflict = err instanceof MongoError && err.code === 112;
 
         if (isWriteConflict && attempt < this.config.MAX_RETRIES) {
           console.warn(
@@ -338,7 +341,7 @@ class CashoutManager {
         // Non-retryable error or max retries exceeded
         console.error(
           `[CashoutManager] Batch processing failed permanently after ${attempt} attempts:`,
-          error
+          err
         );
 
         // Notify users about the failure
@@ -574,14 +577,14 @@ class CashoutManager {
               payout: cashout.payout,
               multiplier: cashout.cashoutMultiplier,
               newAccountBalance: cashout.newAccountBalance,
-            }
+            } satisfies UserCashoutSuccessRes
           );
           notificationsSent++;
         }
-      } catch (error) {
+      } catch (err) {
         console.error(
           `[CashoutManager] Failed to notify client for bet ${cashout.betId}:`,
-          error
+          err
         );
       }
     });
@@ -603,14 +606,14 @@ class CashoutManager {
             SOCKET_EVENTS.EMITTERS.BETTING.CASHOUT_ERROR(cashout.betId),
             {
               message: reason,
-            }
+            } satisfies UserCashoutErrorRes
           );
           notificationsSent++;
         }
-      } catch (error) {
+      } catch (err) {
         console.error(
           `[CashoutManager] Failed to notify client for failed cashout bet ${cashout.betId}:`,
-          error
+          err
         );
       }
     });

@@ -1,13 +1,13 @@
 import { Schema, Document } from "mongoose";
-import { RoundAnalyticsI } from "../types/roundAnalytics.types";
-import { ClientSeedDetails } from "../types/game.types";
+import { RoundAnalyticsI } from "../types/backend/roundAnalytics.types";
+import { ClientSeedDetails } from "../types/backend/game.types";
 import { model } from "mongoose";
 
 export interface RoundAnalyticsDocument extends RoundAnalyticsI, Document {}
 
 const ClientSeedDetailsSchema = new Schema<ClientSeedDetails>({
   seed: { type: String, required: true },
-  userId: { type: String, required: true },
+  username: { type: String, required: true },
 });
 
 const RoundAnalyticsSchema = new Schema<RoundAnalyticsDocument>(
@@ -22,7 +22,8 @@ const RoundAnalyticsSchema = new Schema<RoundAnalyticsDocument>(
       required: true,
       default: 0,
     },
-    roundPhase: { type: String, requried: true },
+    roundCount: { type: Number, required: true },
+    roundPhase: { type: String, required: true },
     provablyFairOutcome: {
       clientSeedDetails: {
         type: [ClientSeedDetailsSchema],

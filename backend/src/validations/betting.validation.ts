@@ -1,6 +1,6 @@
 import Joi from "joi";
-import { BettingPayload, CashoutPayload } from "../types/bet.types";
-import { GAME_CONFIG } from "../config/game.config";
+import { BettingPayload, CashoutPayload } from "../types/backend/bet.types";
+import { GAME_CONFIG } from "../config/env.config";
 
 export const bettingSchema = Joi.object<BettingPayload, true>({
   stake: Joi.number()

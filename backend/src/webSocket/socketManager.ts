@@ -1,9 +1,12 @@
 import { Server, Socket } from "socket.io";
-import { BettingPayload, CashoutPayload } from "../types/bet.types";
+import {
+  BettingPayload,
+  CashoutPayload,
+} from "../types/shared/socketIo/betTypes";
 import { SOCKET_EVENTS } from "../config/socketEvents.config";
-import { bettingManager } from "../services/betting/bettingManager";
-import { cashoutManager } from "../services/betting/cashoutManager";
-import { roundStateManager } from "../services/game/roundStateManager";
+import { bettingManager } from "../services/game/gameEngine/bettingManager";
+import { cashoutManager } from "../services/game/gameEngine/cashoutManager";
+import { roundStateManager } from "../services/game/gameEngine/roundStateManager";
 
 export class SocketManager {
   private io: Server;
@@ -44,7 +47,7 @@ export class SocketManager {
         previousMultipliers: roundStateManager.getState().previousMultipliers,
         hashedServerSeed:
           roundStateManager.getState().provablyFairOutcome?.hashedServerSeed,
-      });
+      } satisfies number);
     });
   }
 }

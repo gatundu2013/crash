@@ -1,5 +1,5 @@
 import { Document, model, Schema } from "mongoose";
-import { SingleBet } from "../types/bet.types";
+import { SingleBet } from "../types/backend/bet.types";
 
 export interface BetHistoryI extends Omit<SingleBet, "criticalMultiplier"> {
   roundId: string;

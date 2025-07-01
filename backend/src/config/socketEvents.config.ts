@@ -35,4 +35,4 @@ export const SOCKET_EVENTS = {
       CASHOUT: "game:cashout",
     },
   },
-};
+} as const;

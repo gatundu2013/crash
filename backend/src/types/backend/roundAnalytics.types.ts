@@ -1,4 +1,5 @@
-import { GamePhase, ProvablyFairOutcomeI } from "./game.types";
+import { GamePhase } from "../shared/socketIo/gameTypes";
+import { ProvablyFairOutcomeI } from "./game.types";
 
 export interface RoundAnalyticsI {
   roundId: string;
@@ -6,6 +7,7 @@ export interface RoundAnalyticsI {
   roundPhase: GamePhase;
   provablyFairOutcome: ProvablyFairOutcomeI;
   financial: FinancialsData;
+  roundCount: number;
 }
 
 export interface FinancialsData {

@@ -5,17 +5,22 @@ import { createServer } from "http";
 import { httpCorsOptions, socketIoConfig } from "./config/cors.config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { gameLifeCycleManager } from "./services/game/gameLifeCycleManager";
+import { gameLifeCycleManager } from "./services/game/gameEngine";
 import { SERVER_CONFIG } from "./config/env.config";
 import { SocketManager } from "./webSocket/socketManager";
-import router from "./routes/v1/user";
+import { userRouter } from "./routes/v1/user";
+import { adminRouter } from "./routes/v1/admin";
+import { gameRouter } from "./routes/v1/game";
 
 const app = express();
 
 app.use(cors(httpCorsOptions));
 app.use(cookieParser());
 app.use(express.json());
-app.use("/api/v1/user", router);
+
+app.use("/api/v1/user", userRouter);
+app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/game", gameRouter);
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, socketIoConfig);

@@ -1,6 +1,7 @@
 import mongoose, { AnyBulkWriteOperation } from "mongoose";
 import { Socket } from "socket.io";
-import { BetHistoryI } from "../models/betHistory.model";
+import { BetHistoryI } from "../../models/betHistory.model";
+import { BettingPayload, CashoutPayload } from "../shared/socketIo/betTypes";
 
 // ==============================
 //         ENUMS
@@ -22,18 +23,33 @@ export interface UserAccountBalance {
 }
 
 // ==============================
-//        BETTING SECTION
+//        IN-MEMORY BET STATE
 // ==============================
 
-export interface BettingPayload {
-  stake: number;
-  autoCashoutMultiplier: number | null;
+export interface SingleBet {
   userId: string;
-  clientSeed: string | null;
-  username: string;
-  storeId: string; // Identifies which button/store triggered the bet
+  betId: string;
+  stake: number;
+  payout: number | null;
+  cashoutMultiplier: number | null;
+  autoCashoutMultiplier: number | null;
+  criticalMultiplier: number; // Multiplier whose payout brings MAX_HOUSE_PAYOUT
+  status: BetStatus;
 }
 
+export interface BetInMemory {
+  bet: SingleBet;
+  socket: Socket;
+}
+
+export interface BetWithAutoCashout {
+  autoCashoutMultiplier: number;
+  isProcessed: boolean;
+}
+
+/**
+ * ....... BETTING MANAGER ........
+ */
 export interface StageBetParams {
   payload: BettingPayload;
   socket: Socket;
@@ -77,46 +93,9 @@ export interface BatchLogsParams {
   failedBetsCounts: number;
 }
 
-// ==============================
-//        IN-MEMORY BET STATE
-// ==============================
-
-export interface SingleBet {
-  userId: string;
-  betId: string;
-  stake: number;
-  payout: number | null;
-  cashoutMultiplier: number | null;
-  autoCashoutMultiplier: number | null;
-  criticalMultiplier: number; // Multiplier whose payout brings MAX_HOUSE_PAYOUT
-  status: BetStatus;
-}
-
-export interface BetInMemory {
-  bet: SingleBet;
-  socket: Socket;
-}
-
-export interface TopStaker
-  extends Omit<
-    SingleBet,
-    "userId" | "status" | "autoCashoutMultiplier" | "criticalMultiplier"
-  > {
-  username: string;
-}
-
-export interface BetWithAutoCashout {
-  autoCashoutMultiplier: number;
-  isProcessed: boolean;
-}
-
-// ==============================
-//        CASHOUT SECTION
-// ==============================
-
-export interface CashoutPayload {
-  betId: string;
-}
+/*
+ ** ......  CASHOUT MANAGER SECTION .......
+ */
 
 export interface StageCashoutParams {
   payload: CashoutPayload;
@@ -157,10 +136,6 @@ export interface NotifyFailedCashoutsParams {
   failedCashouts: StagedCashout[];
   reason: string;
 }
-
-// ==============================
-//        CASHOUT MANAGER SECTION
-// ==============================
 
 export type AutoCashoutEntry = {
   autoCashoutMultiplier: number;
