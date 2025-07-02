@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { LoginReq, RegisterReq } from "../../types/shared/api/authTypes";
 
 export async function registerService(params: RegisterReq) {
-  const { phoneNumber, username, password, agreeToTerms } = params;
+  let { phoneNumber, username, password, agreeToTerms } = params;
 
   const phoneNumberExist = await User.findOne({ phoneNumber }).lean();
   if (phoneNumberExist) {
@@ -18,6 +18,10 @@ export async function registerService(params: RegisterReq) {
       isOperational: true,
     });
   }
+
+  // Username should be stored in lowercase
+  // Reason: Usernames are case-insensitive — "James" and "james" should be considered the same
+  username = username.toLocaleLowerCase();
 
   const usernameExist = await User.findOne({ username }).lean();
   if (usernameExist) {

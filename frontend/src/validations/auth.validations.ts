@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
 export const phoneNumberRegex = /^(07|01)\d{8}$/;
+export const usernameRegex = /^[a-z0-9]+$/;
 
 export const signUpSchema = yup.object({
   phoneNumber: yup
@@ -10,8 +11,12 @@ export const signUpSchema = yup.object({
   username: yup
     .string()
     .required("Username is required")
-    .max(10, "Username must not exceed 10 characters")
-    .min(3, "Username must be at least 3 characters"),
+    .min(4, "Username must be at least 3 characters")
+    .max(12, "Username must not exceed 10 characters")
+    .matches(
+      usernameRegex,
+      "Username can only contain lowercase letters and numbers"
+    ),
   password: yup
     .string()
     .required("Password is required")

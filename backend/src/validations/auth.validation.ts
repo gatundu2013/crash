@@ -1,16 +1,25 @@
-import Joi, { func } from "joi";
+import Joi from "joi";
 import { AuthError } from "../utils/errors/authError";
 
 export const phoneNumberRegex = /^(07|01)\d{8}$/;
+export const usernameRegex = /^[a-z0-9]+$/;
 
 export const registerSchema = Joi.object({
-  username: Joi.string().trim().min(4).max(8).required().messages({
-    "string.base": "Username must be a string",
-    "string.empty": "Username is required",
-    "string.min": "Username must be at least 4 characters",
-    "string.max": "Username must not exceed 8 characters",
-    "any.required": "Username is required",
-  }),
+  username: Joi.string()
+    .trim()
+    .min(4)
+    .max(12)
+    .pattern(usernameRegex)
+    .required()
+    .messages({
+      "string.base": "Username must be a string",
+      "string.empty": "Username is required",
+      "string.min": "Username must be at least 4 characters",
+      "string.max": "Username must not exceed 8 characters",
+      "string.pattern.base":
+        "Username can only contain lowercase letters and numbers",
+      "any.required": "Username is required",
+    }),
 
   phoneNumber: Joi.string()
     .trim()
