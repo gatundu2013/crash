@@ -1,11 +1,13 @@
 import { Socket } from "socket.io";
-import { BettingPayload } from "../types/shared/socketIo/betTypes";
-import { bettingManager } from "../services/game/gameEngine/bettingManager";
+import { bettingManager } from "../src/services/game/gameEngine/bettingManager";
+import { BettingPayload } from "../src/types/shared/socketIo/betTypes";
 
-const mockSocket = {
+type MockSocket = Partial<Pick<Socket, "emit" | "connected">>;
+
+const socket: MockSocket = {
   emit: () => {},
-  connected: true,
-} as unknown as Socket;
+  connected: false, // or true if you want to simulate active connection
+};
 
 const bettingPayload: BettingPayload = {
   autoCashoutMultiplier: null,
@@ -21,7 +23,7 @@ export const stressTestBettingManager = () => {
   for (let i = 0; i < 1000; i++) {
     bettingManager.stageBet({
       payload: bettingPayload,
-      socket: mockSocket,
+      socket,
     });
   }
 };
