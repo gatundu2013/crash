@@ -1,4 +1,4 @@
-import { API_ROUTES } from "@/config/apiRoutes.config";
+import { USER_API_ROUTES } from "@/config/apiRoutes.config";
 import { api } from "@/config/axios.config";
 import useAuthStore from "@/stores/authStore";
 import { useEffect } from "react";
@@ -9,7 +9,7 @@ const useAuthStatus = () => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const response = await api.get(API_ROUTES.AUTH.STATUS);
+        const response = await api.get(USER_API_ROUTES.AUTH.STATUS);
         const userData = response.data.user;
         authenticate(userData);
       } catch (err) {

@@ -1,4 +1,4 @@
-import { API_ROUTES } from "@/config/apiRoutes.config";
+import { USER_API_ROUTES } from "@/config/apiRoutes.config";
 import { api } from "@/config/axios.config";
 import { handleTryCatchError } from "@/utils/tryCatchError";
 import { toast } from "react-toastify";
@@ -9,7 +9,7 @@ export const useLogout = () => {
 
   const logout = async () => {
     try {
-      const response = await api.post(API_ROUTES.AUTH.LOGOUT);
+      const response = await api.post(USER_API_ROUTES.AUTH.LOGOUT);
       deAuthenticate();
       toast.success(response.data.message);
     } catch (err) {
