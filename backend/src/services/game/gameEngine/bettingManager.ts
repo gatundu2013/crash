@@ -52,7 +52,7 @@ class BettingManager {
   private readonly config = {
     MAX_BETS_PER_USER: 20000, // Maximum number of concurrent bets allowed per user
     MAX_BATCH_SIZE: 488, // Maximum number of bets to process in a batch
-    DEBOUNCE_TIME_MS: 500, // Allows bet accumulation before processing
+    DEBOUNCE_TIME_MS: 200, // Allows bet accumulation before processing
     MAX_RETRIES: 2, // Retry attempts for failed database transactions
     BASE_BACKOFF_MS: 200, // Time before next retry attempt
   } as const;
