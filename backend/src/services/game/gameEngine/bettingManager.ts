@@ -80,8 +80,6 @@ class BettingManager {
    * @throws {BettingError} When validation fails or business rules are violated
    */
   public async stageBet(params: StageBetParams) {
-    const operationStart = Date.now();
-    console.log("[BettingManager] stageBet: START");
     const { payload, socket } = params;
 
     try {
@@ -141,12 +139,6 @@ class BettingManager {
 
       // Trigger batch processing if conditions are met
       this.scheduleNextBatch();
-      const operationEnd = Date.now();
-      console.log(
-        `[BettingManager] stageBet: END, duration=${
-          operationEnd - operationStart
-        }ms`
-      );
     } catch (err) {
       const message =
         err instanceof AppError ? err.description : "Failed to place bet";
@@ -551,6 +543,7 @@ class BettingManager {
     }
 
     try {
+      const balanceStart = Date.now();
       // Step 1: Apply all user balance deductions in a single bulk operation
       const balanceUpdateResult = await User.bulkWrite(balanceUpdateOps, {
         session,
@@ -558,6 +551,7 @@ class BettingManager {
       // console.info(
       //   `[BettingManager] Balance updates completed: ${balanceUpdateResult.modifiedCount} accounts updated.`
       // );
+      console.log("User balance updates took", Date.now() - balanceStart, "ms");
 
       // Step 2: Create bet history records for all accepted bets
       const betHistories: BetHistoryI[] = validatedBets.map(({ payload }) => ({
@@ -572,9 +566,11 @@ class BettingManager {
         roundId: this.currentRoundId as string,
       }));
 
+      const insertStart = Date.now();
       const betHistoryResult = await BetHistory.insertMany(betHistories, {
         session,
       });
+      console.log("Bet insertMany took", Date.now() - insertStart, "ms");
 
       console.info(
         `[BettingManager] ${betHistoryResult.length} bet history records inserted. ${balanceUpdateResult.modifiedCount} account balances updated.`
