@@ -80,6 +80,8 @@ class BettingManager {
    * @throws {BettingError} When validation fails or business rules are violated
    */
   public async stageBet(params: StageBetParams) {
+    const operationStart = Date.now();
+    console.log("[BettingManager] stageBet: START");
     const { payload, socket } = params;
 
     try {
@@ -139,6 +141,12 @@ class BettingManager {
 
       // Trigger batch processing if conditions are met
       this.scheduleNextBatch();
+      const operationEnd = Date.now();
+      console.log(
+        `[BettingManager] stageBet: END, duration=${
+          operationEnd - operationStart
+        }ms`
+      );
     } catch (err) {
       const message =
         err instanceof AppError ? err.description : "Failed to place bet";
@@ -173,6 +181,8 @@ class BettingManager {
    * - Transaction-scoped operations for data consistency
    */
   private async processBatch() {
+    const operationStart = Date.now();
+    console.log("[BettingManager] processBatch: START");
     // Prevent concurrent batch processing
     if (this.isProcessing) {
       return;
@@ -348,6 +358,12 @@ class BettingManager {
     // Reset processing flag and schedule next batch if more bets are waiting
     this.isProcessing = false;
     this.scheduleNextBatch();
+    const operationEnd = Date.now();
+    console.log(
+      `[BettingManager] processBatch: END, duration=${
+        operationEnd - operationStart
+      }ms`
+    );
   }
 
   /**
@@ -371,6 +387,8 @@ class BettingManager {
    * @returns Object containing the extracted batch array and user-grouped bet data
    */
   private extractAndGroupBets() {
+    const operationStart = Date.now();
+    console.log("[BettingManager] extractAndGroupBets: START");
     // Extract a batch of bets limited by configuration
     const batch: StagedBet[] = Array.from(this.stagedBets.values()).slice(
       0,
@@ -402,7 +420,14 @@ class BettingManager {
       }
     });
 
-    return { batch, groupedUserBets };
+    const result = { batch, groupedUserBets };
+    const operationEnd = Date.now();
+    console.log(
+      `[BettingManager] extractAndGroupBets: END, duration=${
+        operationEnd - operationStart
+      }ms`
+    );
+    return result;
   }
 
   /**
@@ -422,6 +447,8 @@ class BettingManager {
    * @returns Object containing validated bets, failed bets, and prepared database operations
    */
   private validateBetsAndPrepareOperations(params: ValidateBetsParams) {
+    const operationStart = Date.now();
+    console.log("[BettingManager] validateBetsAndPrepareOperations: START");
     const { groupedUserBets, userAccountBalances } = params;
 
     const balanceUpdateOps: AnyBulkWriteOperation[] = [];
@@ -484,7 +511,14 @@ class BettingManager {
       validatedBets.push(...userValidatedBets);
     });
 
-    return { validatedBets, failedBets, balanceUpdateOps };
+    const result = { validatedBets, failedBets, balanceUpdateOps };
+    const operationEnd = Date.now();
+    console.log(
+      `[BettingManager] validateBetsAndPrepareOperations: END, duration=${
+        operationEnd - operationStart
+      }ms`
+    );
+    return result;
   }
 
   /**
@@ -505,6 +539,8 @@ class BettingManager {
   private async executeDatabaseOperations(
     params: ExecuteDatabaseOperationsParams
   ): Promise<void> {
+    const operationStart = Date.now();
+    console.log("[BettingManager] executeDatabaseOperations: START");
     const { balanceUpdateOps, validatedBets, session } = params;
 
     // Critical safety check - we must have a valid round ID to associate bets with
@@ -542,6 +578,12 @@ class BettingManager {
 
       console.info(
         `[BettingManager] ${betHistoryResult.length} bet history records inserted. ${balanceUpdateResult.modifiedCount} account balances updated.`
+      );
+      const operationEnd = Date.now();
+      console.log(
+        `[BettingManager] executeDatabaseOperations: END, duration=${
+          operationEnd - operationStart
+        }ms`
       );
     } catch (err) {
       console.error("[BettingManager] Database operations failed:", err);
@@ -643,12 +685,7 @@ class BettingManager {
    * - Performance analysis and optimization
    * - System capacity planning
    * - Debugging and troubleshooting
-   *
-   * ## Logged Metrics:
-   * - **Processing Duration**: Time taken in milliseconds/seconds
-   * - **Throughput**: Total number of bets processed in the batch
-   * - **Success Rate**: Count of successfully processed vs failed bets
-   * - **Performance Indicators**: Processing rate (bets per second) for batch
+   * - Capacity planning and scaling decisions
    */
   private logBatchTiming(params: BatchLogsParams): void {
     const { batchStart, batchSize, successfulBetsCounts, failedBetsCounts } =
