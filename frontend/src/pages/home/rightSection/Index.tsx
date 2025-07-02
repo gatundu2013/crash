@@ -36,7 +36,10 @@ const RightSection = () => {
           value={RIGHT_SECTION_TABS.chats}
           className="h-full bg-layer-4 rounded-3xl"
         >
-          Chats
+          <div className="w-full h-full flex flex-col items-center mt-10 ">
+            <h1 className="text-md">Chats</h1>
+            <h4 className="text-green-1 font-medium text-sm">Coming soon</h4>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
