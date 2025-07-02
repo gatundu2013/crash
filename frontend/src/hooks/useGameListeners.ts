@@ -12,7 +12,7 @@ const useGameListeners = () => {
     handleBettingPhase,
     handleBroadcastSuccessfulBets,
     handleBroadcastSuccessfulCashouts,
-    handleBroadcastHashedServerSeed,
+    resetLiveStats,
     onConnectData,
   } = useGameStore.getState();
 
@@ -45,8 +45,8 @@ const useGameListeners = () => {
         handler: handleBroadcastSuccessfulCashouts,
       },
       {
-        eventName: SOCKET_EVENTS.LISTENERS.BROADCAST_HASHED_SERVER_SEED,
-        handler: handleBroadcastHashedServerSeed,
+        eventName: SOCKET_EVENTS.LISTENERS.RESET_LIVE_STATS,
+        handler: resetLiveStats,
       },
       {
         eventName: SOCKET_EVENTS.LISTENERS.ON_CONNECT_DATA,

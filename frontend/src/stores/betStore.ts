@@ -1,19 +1,19 @@
 import { GAME_CONFIG } from "@/config/game.config";
 import { create } from "zustand";
-import { GamePhase } from "@/types/game.types";
 import useGameStore from "./gameStore";
 import useAuthStore from "./authStore";
 import useSocketStore from "./socketStore";
 import { toast } from "react-toastify";
-import type {
-  BetStoreI,
-  BettingPayload,
-  CashoutPayload,
-  SuccessfulBetRes,
-  SuccessfulCashoutRes,
-} from "@/types/bet.types";
 import { SOCKET_EVENTS } from "@/config/socketEvents.config";
 import { cashoutSuccessToaster } from "@/components/toasters";
+import type { BetStoreI } from "@/types/frontend/bet.types";
+import { GamePhase } from "@/types/shared/socketIo/gameTypes";
+import type {
+  BettingPayload,
+  CashoutPayload,
+  UserCashoutSuccessRes,
+  UserPlaceBetSuccessRes,
+} from "@/types/shared/socketIo/betTypes";
 
 const initialState = {
   stake: GAME_CONFIG.MIN_STAKE,
@@ -185,7 +185,7 @@ const createBetStore = (storeId: string) => {
     },
 
     // Socket event handlers
-    handleBetSuccess: (data: SuccessfulBetRes) => {
+    handleBetSuccess: (data: UserPlaceBetSuccessRes) => {
       const { betId, accountBalance } = data;
       const { updateUserData } = useAuthStore.getState();
 
@@ -212,7 +212,7 @@ const createBetStore = (storeId: string) => {
       }
     },
 
-    handleCashoutSuccess: (data: SuccessfulCashoutRes) => {
+    handleCashoutSuccess: (data: UserCashoutSuccessRes) => {
       const updateUserData = useAuthStore.getState().updateUserData;
 
       cashoutSuccessToaster({

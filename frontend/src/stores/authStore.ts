@@ -1,17 +1,15 @@
-import type { UserI } from "@/types/user.types";
+import type { UserRes } from "@/types/shared/api/authTypes";
 import generateClientSeed from "@/utils/generateClientSeed";
 import { create } from "zustand";
 
 interface AuthStoreI {
   isAuthenticated: boolean;
-  userData: UserI | null;
+  userData: UserRes | null;
   clientSeed: string;
 
-  authenticate: (userData: UserI) => void;
+  authenticate: (userData: UserRes) => void;
   deAuthenticate: () => void;
-
-  updateUserData: (newData: Partial<UserI>) => void;
-
+  updateUserData: (newData: Partial<UserRes>) => void;
   setClientSeed: (newSeed: string) => void;
 }
 
@@ -20,7 +18,7 @@ const useAuthStore = create<AuthStoreI>((set) => ({
   userData: null,
   clientSeed: generateClientSeed(),
 
-  authenticate(userData: UserI) {
+  authenticate(userData: UserRes) {
     set({ isAuthenticated: true, userData });
   },
 
@@ -28,7 +26,7 @@ const useAuthStore = create<AuthStoreI>((set) => ({
     set({ isAuthenticated: false, userData: null });
   },
 
-  updateUserData(newData: Partial<UserI>) {
+  updateUserData(newData: Partial<UserRes>) {
     set((state) => ({
       userData: state.userData
         ? { ...state.userData, ...newData }

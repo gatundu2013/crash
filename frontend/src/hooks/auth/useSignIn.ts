@@ -1,7 +1,7 @@
 import { USER_API_ROUTES } from "@/config/apiRoutes.config";
 import { api } from "@/config/axios.config";
 import useAuthStore from "@/stores/authStore";
-import type { SignInFormData } from "@/types/auth.types";
+import type { AuthSuccessRes, LoginReq } from "@/types/shared/api/authTypes";
 import { handleTryCatchError } from "@/utils/tryCatchError";
 import { signInSchema } from "@/validations/auth.validations";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const useSignIn = () => {
-  const form = useForm<SignInFormData>({
+  const form = useForm<LoginReq>({
     defaultValues: {
       phoneNumber: "",
       password: "",
@@ -20,14 +20,12 @@ const useSignIn = () => {
   const authenticate = useAuthStore((state) => state.authenticate);
   const navigate = useNavigate();
 
-  const signIn: SubmitHandler<SignInFormData> = async (
-    data: SignInFormData
-  ) => {
+  const signIn: SubmitHandler<LoginReq> = async (data: LoginReq) => {
     try {
       const response = await api.post(USER_API_ROUTES.AUTH.SIGN_IN, data);
-      const userData = response.data.user;
+      const userData: AuthSuccessRes = response.data;
 
-      authenticate(userData);
+      authenticate(userData.user);
       toast.success("logged in successfully");
 
       navigate("/");

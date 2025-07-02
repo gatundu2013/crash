@@ -1,3 +1,10 @@
+import type {
+  UserCashoutErrorRes,
+  UserCashoutSuccessRes,
+  UserPlaceBetErrorRes,
+  UserPlaceBetSuccessRes,
+} from "../../types/shared/socketIo/betTypes";
+
 export interface BetStoreI {
   // State
   stake: number;
@@ -31,36 +38,12 @@ export interface BetStoreI {
   areBetControlsDisabled: () => boolean;
 
   // Socket handlers
-  handleBetSuccess: (data: SuccessfulBetRes) => void;
-  handleBetFailure: (data?: { message: string }) => void;
-  handleCashoutSuccess: (data: SuccessfulCashoutRes) => void;
-  handleCashoutFailure: (data?: { message: string }) => void;
+  handleBetSuccess: (data: UserPlaceBetSuccessRes) => void;
+  handleBetFailure: (data: UserPlaceBetErrorRes) => void;
+  handleCashoutSuccess: (data: UserCashoutSuccessRes) => void;
+  handleCashoutFailure: (data: UserCashoutErrorRes) => void;
 
   // Socket lifecycle
   subscribeToSocketEvents: () => void;
   unsubscribeFromSocketEvents: () => void;
-}
-
-export interface BettingPayload {
-  stake: number;
-  autoCashoutMultiplier: number | null;
-  userId: string;
-  clientSeed: string | null;
-  username: string;
-  storeId: string; // used to identify events
-}
-
-export interface CashoutPayload {
-  betId: string;
-}
-
-export interface SuccessfulBetRes {
-  betId: string;
-  accountBalance: number;
-}
-
-export interface SuccessfulCashoutRes {
-  payout: number;
-  multiplier: number;
-  newAccountBalance: number;
 }

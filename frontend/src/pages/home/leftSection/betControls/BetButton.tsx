@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import useGameStore from "@/stores/gameStore";
-import type { BetStoreI } from "@/types/bet.types";
-import { GamePhase } from "@/types/game.types";
+import type { BetStoreI } from "@/types/frontend/bet.types";
+import { GamePhase } from "@/types/shared/socketIo/gameTypes";
+
 import { useEffect } from "react";
 
 interface BetButtonProps extends BetStoreI {}

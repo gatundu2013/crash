@@ -1,6 +1,6 @@
 import useGameStore from "@/stores/gameStore";
 import useSocketStore from "@/stores/socketStore";
-import { GamePhase } from "@/types/game.types";
+import { GamePhase } from "@/types/shared/socketIo/gameTypes";
 import { useEffect, useRef } from "react";
 
 const Canvas = () => {

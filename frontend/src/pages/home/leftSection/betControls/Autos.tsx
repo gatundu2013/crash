@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { GAME_CONFIG } from "@/config/game.config";
-import type { BetStoreI } from "@/types/bet.types";
+import type { BetStoreI } from "@/types/shared/frontend/bet.types";
 import { useState, type ChangeEvent } from "react";
 import { RxCross1 } from "react-icons/rx";
 

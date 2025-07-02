@@ -12,7 +12,7 @@ export const SOCKET_EVENTS = {
 
     BROADCAST_SUCCESSFUL_BETS: "broadcastSuccessfulBets",
     BROADCAST_SUCCESSFUL_CASHOUTS: "broadSuccessfulCashouts",
-    BROADCAST_HASHED_SERVER_SEED: "broadcastHashedServerSeed",
+    RESET_LIVE_STATS: "resetLiveStatus",
     ON_CONNECT_DATA: "onConnectData",
 
     GAME_PHASE: {

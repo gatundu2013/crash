@@ -27,15 +27,19 @@ const PreviousMultiplier = ({
   roundId,
 }: PreviousMultiplierProps) => {
   const { errMsg, isLoading, data, fetchData } =
-    useFetch<ProvablyFairResultsResp>({
-      url: GAME_API_ROUTES.PROVABLY_FAIR_RESULTS.GET_BY_ROUND_ID(roundId),
-    });
+    useFetch<ProvablyFairResultsResp>();
+
+  const getProvablyFairOutcome = async () => {
+    await fetchData(
+      GAME_API_ROUTES.PROVABLY_FAIR_RESULTS.GET_BY_ROUND_ID(roundId)
+    );
+  };
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <button
-          onClick={fetchData}
+          onClick={getProvablyFairOutcome}
           className={cn(
             "text-sm font-semibold px-2.5 cursor-pointer relative text-orange-1",
             finalMultiplier > 2 && "text-green-1"

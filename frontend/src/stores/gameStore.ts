@@ -1,20 +1,19 @@
-import {
-  GamePhase,
-  type GameStoreI,
-  type PreparingPhaseData,
-  type RunningPhaseData,
-  type EndPhaseData,
-  type BettingPhaseData,
-  type ErrorPhaseData,
-  type BroadcastBetRes,
-  type BroadcastCashoutRes,
-  type BroadcastHashedServerSeed,
-  type OnConnectData,
-} from "@/types/game.types";
+import type { GameStoreI } from "@/types/frontend/game.types";
+import { GamePhase } from "@/types/shared/socketIo/gameTypes";
+import type {
+  PreparingPhaseRes,
+  RunningPhaseRes,
+  EndPhaseRes,
+  BettingPhaseRes,
+  GamePhaseErrorRes,
+  OnConnectRes,
+  BroadcastCashoutSuccessRes,
+  BroadcastPlaceBetSuccessRes,
+} from "../types/shared/socketIo/gameTypes";
 import { create } from "zustand";
 
-const useGameStore = create<GameStoreI>((set) => ({
-  gamePhase: GamePhase.IDLE,
+const INITIAL_STATE = {
+  gamePhase: GamePhase.PREPARING,
   hashedServerSeed: "",
   currentMultiplier: 1,
   finalMultiplier: 0,
@@ -26,76 +25,121 @@ const useGameStore = create<GameStoreI>((set) => ({
   cashedOutBetsSize: 0,
   numberOfCashouts: 0,
   totalBetAmount: 0,
+};
+
+const useGameStore = create<GameStoreI>((set, get) => ({
+  ...INITIAL_STATE,
 
   // PHASE HANDLERS
+  handlePreparingPhase(data: PreparingPhaseRes) {
+    if (!data) return;
 
-  handlePreparingPhase(data: PreparingPhaseData) {
+    const { gamePhase, hashedServerSeed } = data;
+
     set({
-      gamePhase: GamePhase.PREPARING,
+      gamePhase,
+      hashedServerSeed,
     });
   },
 
-  handleRunningPhase(data: RunningPhaseData) {
+  handleRunningPhase(data: RunningPhaseRes) {
+    if (!data?.currentMultiplier) return;
+
     set({
       gamePhase: GamePhase.RUNNING,
-      currentMultiplier: data?.currentMultiplier,
+      currentMultiplier: data.currentMultiplier,
     });
   },
 
-  handleEndPhase(data: EndPhaseData) {
-    const { finalMultiplier, roundId } = data;
+  handleEndPhase(data: EndPhaseRes) {
+    if (!data) return;
 
-    set((state) => ({
-      gamePhase: GamePhase.END,
-      finalMultiplier: data?.finalMultiplier,
+    const { finalMultiplier, roundId, gamePhase } = data;
+    const currentState = get();
+
+    set({
+      gamePhase,
+      finalMultiplier,
       previousMultipliers: [
         { finalMultiplier, roundId },
-        ...state.previousMultipliers,
+        ...currentState.previousMultipliers,
       ],
-    }));
-  },
-
-  handleBettingPhase(data: BettingPhaseData) {
-    set({
-      gamePhase: GamePhase.BETTING,
-      countDown: data?.countDown,
     });
   },
 
-  handleErrorPhase(data: ErrorPhaseData) {
+  handleBettingPhase(data: BettingPhaseRes) {
+    if (!data) return;
+
+    const { gamePhase, countDown } = data;
+
     set({
-      gamePhase: GamePhase.ERROR,
-      message: data?.message,
+      gamePhase,
+      countDown: Math.max(0, countDown), // Ensure countdown is not negative
     });
   },
 
-  handleBroadcastHashedServerSeed(data: BroadcastHashedServerSeed) {
+  handleErrorPhase(data: GamePhaseErrorRes) {
+    if (!data) return;
+
+    const { gamePhase, message } = data;
+
     set({
-      hashedServerSeed: data?.hashedServerSeed,
+      gamePhase,
+      message,
     });
   },
 
-  handleBroadcastSuccessfulBets(data: BroadcastBetRes) {
+  handleBroadcastSuccessfulBets(data: BroadcastPlaceBetSuccessRes) {
+    if (!data) return;
+
+    const { totalBetAmount = 0, totalBets = 0, topStakers = [] } = data;
+
     set({
-      totalBetAmount: data.totalBetAmount ?? 0,
-      totalBets: data.totalBets ?? 0,
-      topStakers: data.topStakers ?? [],
+      totalBetAmount: Math.max(0, totalBetAmount),
+      totalBets: Math.max(0, totalBets),
+      topStakers,
     });
   },
 
-  handleBroadcastSuccessfulCashouts(data: BroadcastCashoutRes) {
+  handleBroadcastSuccessfulCashouts(data: BroadcastCashoutSuccessRes) {
+    if (!data) return;
+
+    const { topStakers = [], numberOfCashouts = 0 } = data;
+
     set({
-      topStakers: data.topStakers ?? [],
-      numberOfCashouts: data?.numberOfCashouts ?? 0,
+      topStakers,
+      numberOfCashouts: Math.max(0, numberOfCashouts),
     });
   },
 
-  onConnectData(data: OnConnectData) {
+  onConnectData(data: OnConnectRes) {
+    if (!data) return;
+
+    const {
+      topStakers = [],
+      previousMultipliers = [],
+      hashedServerSeed = "",
+    } = data;
+
     set({
-      topStakers: data.topStakers || [],
-      previousMultipliers: data.previousMultipliers || [],
-      hashedServerSeed: data.hashedServerSeed,
+      topStakers,
+      previousMultipliers,
+      hashedServerSeed,
     });
+  },
+
+  resetLiveStats() {
+    set({
+      totalBetAmount: 0,
+      numberOfCashouts: 0,
+      cashedOutBetsSize: 0,
+      totalBets: 0,
+      topStakers: [],
+    });
+  },
+
+  resetGameState() {
+    set(INITIAL_STATE);
   },
 }));
 

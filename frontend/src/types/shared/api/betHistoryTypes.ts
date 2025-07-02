@@ -1,3 +1,8 @@
+export interface GetBetHistoryParams {
+  userId: string;
+  page: number;
+}
+
 export interface GetBetHistoryRes {
   betId: string;
   stake: number;
