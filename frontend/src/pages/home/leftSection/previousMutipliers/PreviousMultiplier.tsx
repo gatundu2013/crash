@@ -15,7 +15,6 @@ import { AiOutlineLoading } from "react-icons/ai";
 import { format } from "date-fns";
 import useFetch from "@/hooks/useFetch";
 import { GAME_API_ROUTES } from "@/config/apiRoutes.config";
-import type { ProvablyFairResultsResp } from "@/types/apiRes.types";
 
 interface PreviousMultiplierProps {
   finalMultiplier: number;
@@ -26,8 +25,7 @@ const PreviousMultiplier = ({
   finalMultiplier,
   roundId,
 }: PreviousMultiplierProps) => {
-  const { errMsg, isLoading, data, fetchData } =
-    useFetch<ProvablyFairResultsResp>();
+  const { errMsg, isLoading, data, fetchData } = useFetch<any>();
 
   const getProvablyFairOutcome = async () => {
     await fetchData(
@@ -120,7 +118,7 @@ const PreviousMultiplier = ({
               </div>
 
               {data?.provablyFairOutcome.clientSeedDetails.map(
-                (clientSeed, index) => (
+                (clientSeed: any, index: any) => (
                   <div
                     key={index}
                     className="bg-layer-1 flex flex-col gap-1 md:flex-row justify-between items-center rounded-lg py-1.5 px-5 text-md"

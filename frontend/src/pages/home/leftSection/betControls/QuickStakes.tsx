@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { GAME_CONFIG } from "@/config/game.config";
-import type { BetStoreI } from "@/types/shared/frontend/bet.types";
+import type { BetStoreI } from "@/types/frontend/bet.types";
 
 interface QuickStakeProps
   extends Pick<BetStoreI, "setStake" | "areBetControlsDisabled"> {}

@@ -3,7 +3,7 @@ import QuickStakes from "./QuickStakes";
 import BetButton from "./BetButton";
 import Autos from "./Autos";
 import type { StoreApi, UseBoundStore } from "zustand";
-import type { BetStoreI } from "@/types/shared/frontend/bet.types";
+import type { BetStoreI } from "@/types/frontend/bet.types";
 
 interface BetControllerProps {
   useStore: UseBoundStore<StoreApi<BetStoreI>>;
