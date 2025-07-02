@@ -200,8 +200,24 @@ body {
 
 /* toast Styles */
 
+/* Increase vertical spacing between toast notifications */
+.Toastify__toast-container {
+  gap: 1px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.Toastify__toast {
+  font-family: "Inter", sans-serif;
+  font: 500 !important;
+  font-size: 14px;
+  border-radius: 12px;
+  padding: 9px 16px;
+  min-height: 0 !important;
+}
+
 .Toastify__toast--success {
-  background-color: #4caf50;
+  background-color: #2dc653;
   color: white;
 }
 
@@ -218,12 +234,4 @@ body {
 .Toastify__toast--warning {
   background-color: #ff9800;
   color: black;
-}
-
-.Toastify__toast {
-  font-family: "Inter", sans-serif;
-  font-size: 14px;
-  border-radius: 12px;
-  padding: 9px 16px;
-  min-height: 0 !important;
 }
