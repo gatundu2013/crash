@@ -50,7 +50,7 @@ class BettingManager {
    * These values are tuned for production workloads and can be adjusted based on system capacity.
    */
   private readonly config = {
-    MAX_BETS_PER_USER: 20000, // Maximum number of concurrent bets allowed per user
+    MAX_BETS_PER_USER: 2, // Maximum number of concurrent bets allowed per user
     MAX_BATCH_SIZE: 488, // Maximum number of bets to process in a batch
     DEBOUNCE_TIME_MS: 200, // Allows bet accumulation before processing
     MAX_RETRIES: 2, // Retry attempts for failed database transactions
@@ -572,7 +572,7 @@ class BettingManager {
         betHistories.map((doc) => ({
           insertOne: { document: doc },
         })),
-        { session, writeConcern: { w: 1 } }
+        { session }
       );
 
       console.log("Bet insertMany took", Date.now() - insertStart, "ms");

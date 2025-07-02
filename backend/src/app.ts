@@ -36,8 +36,6 @@ async function startServer() {
 
     gameLifeCycleManager.startGame(); // start game
 
-    stressTestBettingManager();
-
     httpServer.listen(SERVER_CONFIG.PORT!, () => {
       console.log(`
       ################################################
