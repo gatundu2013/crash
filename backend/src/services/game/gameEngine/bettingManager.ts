@@ -572,7 +572,7 @@ class BettingManager {
         betHistories.map((doc) => ({
           insertOne: { document: doc },
         })),
-        { session }
+        { session, writeConcern: { w: 1 } }
       );
 
       console.log("Bet insertMany took", Date.now() - insertStart, "ms");
