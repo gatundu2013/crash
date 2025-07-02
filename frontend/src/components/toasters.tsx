@@ -30,7 +30,7 @@ export const cashoutSuccessToaster = ({
         <RiCheckFill className="bg-green-1 text-black rounded-full w-5 h-5" />
       ),
       className:
-        "!bg-gradient-to-r !from-green-300/15 !to-layer-1 !flex !border !border-white/20 !rounded-sm !py-2  ",
+        "!bg-gradient-to-r !from-green-300/15 !to-layer-1 !flex !border !border-white/20 !rounded-sm !py-2",
     }
   );
 };

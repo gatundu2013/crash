@@ -11,7 +11,7 @@ const LiveBetsBody = () => {
         <div className="flex flex-col space-y-3 pt-1">
           {topStakers.map((topStaker, index) => (
             <div
-              key={topStaker?.username || index}
+              key={index}
               className="grid grid-cols-4 text-sm font-semibold px-1"
             >
               {/* Player */}

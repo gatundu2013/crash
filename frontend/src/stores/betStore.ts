@@ -215,8 +215,6 @@ const createBetStore = (storeId: string) => {
     handleCashoutSuccess: (data: SuccessfulCashoutRes) => {
       const updateUserData = useAuthStore.getState().updateUserData;
 
-      console.log("CALLEDDDD");
-
       cashoutSuccessToaster({
         cashoutMultiplier: data.multiplier,
         payout: data.payout,
