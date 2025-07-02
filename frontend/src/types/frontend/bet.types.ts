@@ -21,6 +21,7 @@ export interface BetStoreI {
   setAutoBet: (hasAutoBet: boolean) => void;
   setAutoCashout: (hasAutoCashout: boolean) => void;
   setAutoCashoutValue: (autoCashoutValue: number) => void;
+  setIsRequesting: (isRequesting: boolean) => void;
 
   // Actions
   placeBet: () => void;

@@ -197,3 +197,33 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* toast Styles */
+
+.Toastify__toast--success {
+  background-color: #4caf50;
+  color: white;
+}
+
+.Toastify__toast--error {
+  background-color: var(--error);
+  color: white;
+}
+
+.Toastify__toast--info {
+  background-color: #2196f3;
+  color: white;
+}
+
+.Toastify__toast--warning {
+  background-color: #ff9800;
+  color: black;
+}
+
+.Toastify__toast {
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  border-radius: 12px;
+  padding: 9px 16px;
+  min-height: 0 !important;
+}

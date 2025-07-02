@@ -3,11 +3,11 @@ import Avatar from "../../assets/avatar.png";
 import { format } from "date-fns";
 import useFetch from "@/hooks/useFetch";
 import { useEffect, useState, useRef } from "react";
-import type { GetBetHistoryRes } from "@/types/betHistory.types";
 import { USER_API_ROUTES } from "@/config/apiRoutes.config";
 import useAuthStore from "@/stores/authStore";
 import { SubmitButton } from "@/components/forms";
 import { toast } from "react-toastify";
+import type { GetBetHistoryRes } from "@/types/shared/api/betHistoryTypes";
 
 const BetHistory = () => {
   const { isLoading, fetchData } = useFetch<GetBetHistoryRes[]>();

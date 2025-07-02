@@ -6,7 +6,7 @@ export const handleTryCatchError = (err: unknown, shouldToast = true) => {
     ? err.response?.data?.message
     : "An error occured";
 
-  shouldToast && toast(errMessage);
+  shouldToast && toast.error(errMessage);
 
   return errMessage;
 };

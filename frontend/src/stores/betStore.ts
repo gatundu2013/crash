@@ -35,6 +35,11 @@ const createBetStore = (storeId: string) => {
     setAutoBet: (hasAutoBet) => set({ hasAutoBet }),
     setAutoCashout: (hasAutoCashout) => set({ hasAutoCashout }),
     setAutoCashoutValue: (autoCashoutValue) => set({ autoCashoutValue }),
+    setIsRequesting(isRequesting: boolean) {
+      if (isRequesting && typeof isRequesting == "boolean") {
+        set({ isRequesting });
+      }
+    },
 
     // Computed properties
     canPlaceBet: () => {

@@ -15,6 +15,9 @@ const BetButton = ({
   hasAutoBet,
   isRequesting,
   betId,
+  hasAutoCashout,
+  autoCashoutValue,
+  setIsRequesting,
   performBetAction,
   isPlaceButtonDisabled,
   handleGamePhaseChange,
@@ -33,6 +36,17 @@ const BetButton = ({
   useEffect(() => {
     handleGamePhaseChange();
   }, [gamePhase, hasAutoBet]);
+
+  // Avoid duplicate cashout if autoCashout already triggered
+  useEffect(() => {
+    if (
+      hasAutoCashout &&
+      hasPlacedBet &&
+      currentMultiplier >= autoCashoutValue
+    ) {
+      setIsRequesting(true);
+    }
+  }, [currentMultiplier]);
 
   const handleBetUI = () => {
     if (isRequesting) {

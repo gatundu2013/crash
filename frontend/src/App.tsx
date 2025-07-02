@@ -27,6 +27,8 @@ function App() {
         position="top-center"
         hideProgressBar
         icon={false}
+        pauseOnFocusLoss={false}
+        draggable
         className={"cursor-pointer"}
       />
       <RouterProvider router={routes} />
