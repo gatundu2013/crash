@@ -11,6 +11,7 @@ import { SocketManager } from "./webSocket/socketManager";
 import { userRouter } from "./routes/v1/user";
 import { adminRouter } from "./routes/v1/admin";
 import { gameRouter } from "./routes/v1/game";
+import { stressTestBettingManager } from "./test/stressTestBettingManager";
 
 const app = express();
 
@@ -34,6 +35,8 @@ async function startServer() {
     socketManager.initializeSocketConnection();
 
     gameLifeCycleManager.startGame(); // start game
+
+    stressTestBettingManager();
 
     httpServer.listen(SERVER_CONFIG.PORT!, () => {
       console.log(`
