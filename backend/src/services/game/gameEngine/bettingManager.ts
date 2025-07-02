@@ -567,13 +567,18 @@ class BettingManager {
       }));
 
       const insertStart = Date.now();
-      const betHistoryResult = await BetHistory.insertMany(betHistories, {
-        session,
-      });
+
+      const betHistoryResult = await BetHistory.bulkWrite(
+        betHistories.map((doc) => ({
+          insertOne: { document: doc },
+        })),
+        { session }
+      );
+
       console.log("Bet insertMany took", Date.now() - insertStart, "ms");
 
       console.info(
-        `[BettingManager] ${betHistoryResult.length} bet history records inserted. ${balanceUpdateResult.modifiedCount} account balances updated.`
+        `[BettingManager] ${betHistoryResult.insertedCount} bet history records inserted. ${balanceUpdateResult.modifiedCount} account balances updated.`
       );
       const operationEnd = Date.now();
       console.log(
