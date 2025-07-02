@@ -13,11 +13,13 @@ export function generateAuthTokens(params: JwtPayloadI) {
   return { accessToken };
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export function setCookies(tokens: { accessToken: string }, res: Response) {
   res.cookie("accessToken", tokens.accessToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "none",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: accessTokenMaxAge,
   });
 }
@@ -25,8 +27,8 @@ export function setCookies(tokens: { accessToken: string }, res: Response) {
 export function clearCookies(res: Response) {
   res.clearCookie("accessToken", {
     httpOnly: true,
-    secure: false,
-    sameSite: "none",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: accessTokenMaxAge,
   });
 }
