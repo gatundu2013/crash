@@ -21,12 +21,6 @@ export interface BettingPayload {
   storeId: string; // Indicates which trigger initiated the bet /  Prevent cross-listening
 }
 
-export interface BroadcastPlaceBetSuccessRes {
-  totalBetAmount: number;
-  topStakers: TopStakers[];
-  totalBets: number;
-}
-
 export interface UserPlaceBetSuccessRes {
   betId: string;
   accountBalance: number;
@@ -42,11 +36,6 @@ export interface UserPlaceBetErrorRes {
 
 export interface CashoutPayload {
   betId: string;
-}
-
-export interface BroadcastCashoutSuccessRes {
-  topStakers?: TopStakers[];
-  numberOfCashouts: number;
 }
 
 export interface UserCashoutSuccessRes {

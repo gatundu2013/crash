@@ -88,6 +88,7 @@ class GameLifeCycleManager {
   private async handleBettingPhase(): Promise<void> {
     // Reset round state and get new round ID
     const roundId = roundStateManager.reset();
+    io.emit(SOCKET_EVENTS.EMITTERS.RESET_LIVE_STATS);
 
     // Open betting window to accept new bets
     bettingManager.openBettingWindow(roundId);

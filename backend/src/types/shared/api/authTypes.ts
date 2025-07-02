@@ -1,3 +1,11 @@
+export interface UserRes {
+  phoneNumber: string;
+  username: string;
+  accountBalance: number;
+  avatar: string;
+  userId: string;
+}
+
 /**
  * ........ ENUMS ..........
  *
@@ -45,13 +53,7 @@ export interface OtpReq {
  */
 export interface AuthSuccessRes {
   success: true;
-  userData: {
-    phoneNumber: string;
-    username: string;
-    accountBalance: string;
-    avatar: string;
-    userId: string;
-  };
+  user: UserRes;
 }
 
 export interface LogoutRes {

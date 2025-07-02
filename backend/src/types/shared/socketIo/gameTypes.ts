@@ -66,3 +66,14 @@ export interface OnConnectRes {
   previousMultipliers: PreviousMultiplier[];
   hashedServerSeed: string;
 }
+
+export interface BroadcastCashoutSuccessRes {
+  topStakers?: TopStakers[];
+  numberOfCashouts: number;
+}
+
+export interface BroadcastPlaceBetSuccessRes {
+  totalBetAmount: number;
+  topStakers: TopStakers[];
+  totalBets: number;
+}

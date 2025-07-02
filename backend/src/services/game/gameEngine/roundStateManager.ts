@@ -7,16 +7,14 @@ import {
   BetStatus,
   StagedCashout,
 } from "../../../types/backend/bet.types";
-import {
-  BroadcastCashoutSuccessRes,
-  BroadcastPlaceBetSuccessRes,
-  TopStakers,
-} from "../../../types/shared/socketIo/betTypes";
+import { TopStakers } from "../../../types/shared/socketIo/betTypes";
 import {
   ClientSeedDetails,
   GamePhase,
   PreviousMultiplier,
   ProvablyFairOutcomeI,
+  BroadcastCashoutSuccessRes,
+  BroadcastPlaceBetSuccessRes,
 } from "../../../types/shared/socketIo/gameTypes";
 import { GameError } from "../../../utils/errors/gameError";
 import { eventBus, EVENT_NAMES } from "./eventBus";
