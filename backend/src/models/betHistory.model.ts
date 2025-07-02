@@ -27,7 +27,10 @@ const betHistorySchema = new Schema<BetHistoryDoc>(
   { timestamps: true }
 );
 
-betHistorySchema.index({ betId: 1 });
+// Add compound indexes for better query performance
+betHistorySchema.index({ roundId: 1, status: 1 }); // For querying uncashed bets
+betHistorySchema.index({ userId: 1, betId: 1 }); // For user bet lookups
+betHistorySchema.index({ status: 1, roundId: 1, userId: 1 }); // For active bets
 
 const BetHistory = model<BetHistoryDoc>("BetHistory", betHistorySchema);
 

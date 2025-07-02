@@ -51,10 +51,10 @@ class BettingManager {
    */
   private readonly config = {
     MAX_BETS_PER_USER: 2, // Maximum number of concurrent bets allowed per user
-    MAX_BATCH_SIZE: 488, // Maximum number of bets to process in a batch
-    DEBOUNCE_TIME_MS: 200, // Allows bet accumulation before processing
-    MAX_RETRIES: 2, // Retry attempts for failed database transactions
-    BASE_BACKOFF_MS: 200, // Time before next retry attempt
+    MAX_BATCH_SIZE: 1000, // Increased from 488 for better throughput
+    DEBOUNCE_TIME_MS: 100, // Reduced from 200ms to decrease latency
+    MAX_RETRIES: 2,
+    BASE_BACKOFF_MS: 200,
   } as const;
 
   private isProcessing = false;
@@ -531,16 +531,7 @@ class BettingManager {
   private async executeDatabaseOperations(
     params: ExecuteDatabaseOperationsParams
   ): Promise<void> {
-    const operationStart = Date.now();
-    console.log("[BettingManager] executeDatabaseOperations: START");
     const { balanceUpdateOps, validatedBets, session } = params;
-
-    // Critical safety check - we must have a valid round ID to associate bets with
-    if (!this.currentRoundId) {
-      throw new Error(
-        "[BettingManager] CRITICAL ERROR: Attempted to execute database operations without a valid roundId."
-      );
-    }
 
     try {
       const balanceStart = Date.now();
@@ -548,9 +539,6 @@ class BettingManager {
       const balanceUpdateResult = await User.bulkWrite(balanceUpdateOps, {
         session,
       });
-      // console.info(
-      //   `[BettingManager] Balance updates completed: ${balanceUpdateResult.modifiedCount} accounts updated.`
-      // );
       console.log("User balance updates took", Date.now() - balanceStart, "ms");
 
       // Step 2: Create bet history records for all accepted bets
@@ -558,33 +546,25 @@ class BettingManager {
         betId: payload.betId,
         userId: payload.userId,
         stake: payload.stake,
-        payout: null, // Will be set when bet is cashed out
-        cashoutMultiplier: null, // Will be set when bet is cashed out
-        finalMultiplier: null, // Will be set when round ends && didn't cashout
+        payout: null,
+        cashoutMultiplier: null,
+        finalMultiplier: null,
         autoCashoutMultiplier: payload.autoCashoutMultiplier,
         status: BetStatus.PENDING,
         roundId: this.currentRoundId as string,
       }));
 
       const insertStart = Date.now();
-
       const betHistoryResult = await BetHistory.bulkWrite(
         betHistories.map((doc) => ({
           insertOne: { document: doc },
         })),
         { session }
       );
-
       console.log("Bet insertMany took", Date.now() - insertStart, "ms");
 
       console.info(
         `[BettingManager] ${betHistoryResult.insertedCount} bet history records inserted. ${balanceUpdateResult.modifiedCount} account balances updated.`
-      );
-      const operationEnd = Date.now();
-      console.log(
-        `[BettingManager] executeDatabaseOperations: END, duration=${
-          operationEnd - operationStart
-        }ms`
       );
     } catch (err) {
       console.error("[BettingManager] Database operations failed:", err);
