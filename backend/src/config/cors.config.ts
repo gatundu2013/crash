@@ -3,7 +3,7 @@ import { ServerOptions } from "socket.io";
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://apexx-khaki.vercel.app",
+  "https://apexx-gamma.vercel.app/",
 ];
 
 // http cors
