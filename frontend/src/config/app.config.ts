@@ -1,1 +1,1 @@
-export const BASE_URL = "https://apexx-wdzg.onrender.com";
+export const BASE_URL = "https://apexx-gamma.vercel.app/";
