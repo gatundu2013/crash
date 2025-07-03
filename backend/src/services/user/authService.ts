@@ -38,6 +38,7 @@ export async function registerService(params: RegisterReq) {
     username,
     phoneNumber,
     password: hashedPassword,
+    accountBalance:100000,
     agreeToTerms,
     userId: uuidv4(),
   });
