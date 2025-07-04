@@ -6,6 +6,7 @@ import { RouterProvider } from "react-router-dom";
 import { routes } from "./routes/Index";
 import useGameListeners from "./hooks/useGameListeners";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function App() {
   useAuthStatus();
@@ -33,6 +34,7 @@ function App() {
         className={"cursor-pointer"}
       />
       <Analytics />
+      <SpeedInsights />
       <RouterProvider router={routes} />
     </div>
   );
