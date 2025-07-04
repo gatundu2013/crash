@@ -5,7 +5,7 @@ import useAuthStatus from "./hooks/auth/useAuthStatus";
 import { RouterProvider } from "react-router-dom";
 import { routes } from "./routes/Index";
 import useGameListeners from "./hooks/useGameListeners";
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react";
 
 function App() {
   useAuthStatus();
