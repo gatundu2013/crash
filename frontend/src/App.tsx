@@ -5,6 +5,7 @@ import useAuthStatus from "./hooks/auth/useAuthStatus";
 import { RouterProvider } from "react-router-dom";
 import { routes } from "./routes/Index";
 import useGameListeners from "./hooks/useGameListeners";
+import { Analytics } from "@vercel/analytics/next";
 
 function App() {
   useAuthStatus();
@@ -31,6 +32,7 @@ function App() {
         draggable
         className={"cursor-pointer"}
       />
+      <Analytics />
       <RouterProvider router={routes} />
     </div>
   );
